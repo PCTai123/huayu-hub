@@ -1,3 +1,11 @@
+// lib/organization-store.ts
+// Organization data management with localStorage + Supabase Storage fallback
+
+import {
+  uploadImageToStorage,
+  uploadImagesToStorage,
+} from "@/lib/image-upload";
+
 export interface Partner {
   id: string;
   name: string;
@@ -362,4 +370,140 @@ export function setCertificateImages(images: CertificateImage[]): boolean {
   const success = saveToStorage(orgData);
   if (success) notify();
   return success;
+}
+
+/* ════════════════════════════════════════════ */
+/*           CLOUD UPLOAD (Supabase)             */
+/* ════════════════════════════════════════════ */
+
+/**
+ * Upload all base64 images to Supabase Storage and update localStorage with URLs.
+ * Call this before save to ensure images are stored in cloud, not localStorage.
+ */
+export async function migrateImagesToCloud(): Promise<boolean> {
+  const updates: Partial<OrganizationData> = {};
+
+  // 1. Background
+  if (orgData.backgroundUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(orgData.backgroundUrl, "backgrounds");
+    if (url && !url.startsWith("data:")) updates.backgroundUrl = url;
+  }
+
+  // 2. Banner
+  if (orgData.adBannerUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(orgData.adBannerUrl, "banners");
+    if (url && !url.startsWith("data:")) updates.adBannerUrl = url;
+  }
+
+  // 3. Feedback images
+  const feedbackBase64 = orgData.feedbackImages.filter((i) => i.imageUrl.startsWith("data:image"));
+  if (feedbackBase64.length > 0) {
+    const migrated = await uploadImagesToStorage(feedbackBase64, "feedback");
+    const urlMap = new Map(migrated.map((m) => [m.id, m.imageUrl]));
+    updates.feedbackImages = orgData.feedbackImages.map((i) =>
+      urlMap.has(i.id) ? { ...i, imageUrl: urlMap.get(i.id)! } : i
+    );
+  }
+
+  // 4. Certificate images
+  const certBase64 = orgData.certificateImages.filter((i) => i.imageUrl.startsWith("data:image"));
+  if (certBase64.length > 0) {
+    const migrated = await uploadImagesToStorage(certBase64, "certificates");
+    const urlMap = new Map(migrated.map((m) => [m.id, m.imageUrl]));
+    updates.certificateImages = orgData.certificateImages.map((i) =>
+      urlMap.has(i.id) ? { ...i, imageUrl: urlMap.get(i.id)! } : i
+    );
+  }
+
+  if (Object.keys(updates).length > 0) {
+    return updateOrganization(updates);
+  }
+  return true;
+}
+
+/**
+ * Save with automatic cloud upload — use this from UI instead of raw updateOrganization.
+ * Images that are still base64 will be uploaded to Supabase Storage first.
+ */
+export async function saveOrganizationWithCloudUpload(
+  updates: Partial<OrganizationData>
+): Promise<boolean> {
+  // Apply updates first
+  orgData = mergeOrganizationData(orgData, updates);
+
+  // Upload any new base64 images to cloud
+  const cloudUpdates: Partial<OrganizationData> = {};
+
+  if (updates.backgroundUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(updates.backgroundUrl, "backgrounds");
+    if (url && !url.startsWith("data:")) cloudUpdates.backgroundUrl = url;
+  }
+
+  if (updates.adBannerUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(updates.adBannerUrl, "banners");
+    if (url && !url.startsWith("data:")) cloudUpdates.adBannerUrl = url;
+  }
+
+  if (updates.feedbackImages) {
+    const base64Items = updates.feedbackImages.filter((i) => i.imageUrl.startsWith("data:image"));
+    if (base64Items.length > 0) {
+      const migrated = await uploadImagesToStorage(base64Items, "feedback");
+      const urlMap = new Map(migrated.map((m) => [m.id, m.imageUrl]));
+      cloudUpdates.feedbackImages = updates.feedbackImages.map((i) =>
+        urlMap.has(i.id) ? { ...i, imageUrl: urlMap.get(i.id)! } : i
+      );
+    }
+  }
+
+  if (updates.certificateImages) {
+    const base64Items = updates.certificateImages.filter((i) => i.imageUrl.startsWith("data:image"));
+    if (base64Items.length > 0) {
+      const migrated = await uploadImagesToStorage(base64Items, "certificates");
+      const urlMap = new Map(migrated.map((m) => [m.id, m.imageUrl]));
+      cloudUpdates.certificateImages = updates.certificateImages.map((i) =>
+        urlMap.has(i.id) ? { ...i, imageUrl: urlMap.get(i.id)! } : i
+      );
+    }
+  }
+
+  // Apply cloud URLs
+  if (Object.keys(cloudUpdates).length > 0) {
+    orgData = mergeOrganizationData(orgData, cloudUpdates);
+  }
+
+  // Save to localStorage (now much smaller because images are URLs)
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
+}
+
+/**
+ * Check if any images are still stored as base64 (not yet migrated to cloud)
+ */
+export function hasBase64Images(): boolean {
+  if (orgData.backgroundUrl?.startsWith("data:image")) return true;
+  if (orgData.adBannerUrl?.startsWith("data:image")) return true;
+  if (orgData.feedbackImages.some((i) => i.imageUrl.startsWith("data:image"))) return true;
+  if (orgData.certificateImages.some((i) => i.imageUrl.startsWith("data:image"))) return true;
+  return false;
+}
+
+/**
+ * Get storage usage info for debugging
+ */
+export function getStorageInfo(): { totalKB: number; orgDataKB: number; hasBase64: boolean } {
+  let total = 0;
+  if (typeof window !== "undefined") {
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += (localStorage.getItem(key) || "").length;
+      }
+    }
+  }
+  const orgDataStr = JSON.stringify(orgData);
+  return {
+    totalKB: Math.round(total / 1024),
+    orgDataKB: Math.round(orgDataStr.length / 1024),
+    hasBase64: hasBase64Images(),
+  };
 }

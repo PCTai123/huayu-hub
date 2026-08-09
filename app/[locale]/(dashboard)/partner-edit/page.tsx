@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import {
   getOrganization,
-  updateOrganization,
+  saveOrganizationWithCloudUpload,
   subscribeToOrganization,
   resizeImageToDataURL,
   type OrganizationData,
@@ -125,8 +125,8 @@ export default function PartnerEditPage() {
     };
   }, []);
 
-  const handleSave = useCallback((updated: Partial<OrganizationData>) => {
-    const success = updateOrganization(updated);
+  const handleSave = useCallback(async (updated: Partial<OrganizationData>) => {
+    const success = await saveOrganizationWithCloudUpload(updated);
     if (success) {
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);
