@@ -452,5 +452,107 @@
     "submit": "Submit",
     "register": "Register",
     "registrationLink": "Registration Link"
+  },
+  "partnerEdit": {
+    "title": "Partner Website",
+    "subtitle": "Edit content displayed on the partner website",
+    "viewPartner": "View partner page",
+    "edit": "Edit",
+    "preview": "Preview",
+    "previewHint": "This is a preview of what will be shown on the partner website. Click Edit to toggle sections and add content.",
+    "editHint": "Check the sections you want to display on the partner website. Checked sections will be visible, unchecked will be completely hidden.",
+    "sectionStatus": "Display Status",
+    "locked": "Locked",
+    "autoSync": "Auto-synced from organization info",
+    "saveAll": "Save all changes",
+    "saved": "Changes saved!",
+    "displayContent": "Display Content",
+    "hiddenSections": "Hidden sections",
+    "yearsOld": "years old",
+    "uploadSlot": "Upload image ({count} slots left)",
+    "sections": {
+      "overview": { "label": "Overview", "description": "Auto-synced from organization info" },
+      "story": { "label": "Story", "description": "Auto-synced from organization info" },
+      "members": { "label": "Members", "description": "Auto-synced from org chart" },
+      "partners": { "label": "Partners", "description": "Auto-synced from organization info" },
+      "feedback": { "label": "Student Feedback", "description": "Upload feedback images and info" },
+      "certificates": { "label": "Student Certificates", "description": "Upload certificate images and info" },
+      "adBanner": { "label": "Ad Banner", "description": "8:3 banner with X/Y position adjustment" }
+    },
+    "feedback": {
+      "title": "Student Feedback",
+      "uploadHint": "Upload image",
+      "slotsLeft": "left",
+      "slots": "images",
+      "fullNamePlaceholder": "Full name",
+      "agePlaceholder": "Age",
+      "descriptionPlaceholder": "Short description...",
+      "empty": "No images yet. Upload to get started."
+    },
+    "certificates": {
+      "title": "Student Certificates",
+      "uploadHint": "Upload image",
+      "slotsLeft": "left",
+      "slots": "images",
+      "fullNamePlaceholder": "Full name",
+      "agePlaceholder": "Age",
+      "descriptionPlaceholder": "Short description...",
+      "empty": "No images yet. Upload to get started."
+    },
+    "background": {
+      "title": "Partner Website Background",
+      "hint": "Background will be fixed (static), content cards will scroll up and down.",
+      "uploadHint": "Upload background image",
+      "remove": "Remove background"
+    },
+    "adBanner": {
+      "title": "Ad Banner (8:3)",
+      "uploadHint": "Upload banner (8:3)",
+      "positionX": "Horizontal position (X)",
+      "positionY": "Vertical position (Y)",
+      "left": "Left",
+      "centerX": "Center",
+      "right": "Right",
+      "top": "Top",
+      "centerY": "Center",
+      "bottom": "Bottom"
+    }
+  },
+  "partner": {
+    "nav": {
+      "overview": "Overview",
+      "story": "Story",
+      "members": "Members",
+      "feedback": "Feedback",
+      "certificates": "Certificates"
+    },
+    "sections": {
+      "aboutUs": "About Us",
+      "story": "Story",
+      "history": "History",
+      "mission": "Mission",
+      "achievements": "Achievements",
+      "partners": "Partners",
+      "partnersSubtitle": "Community of partners - Growing together",
+      "feedback": "Student Feedback",
+      "feedbackSubtitle": "Sharing from Huayu Hub students",
+      "certificates": "Student Certificates",
+      "certificatesSubtitle": "Achievements of Huayu Hub students",
+      "members": "Key Members"
+    },
+    "stats": {
+      "members": "Members",
+      "teams": "Teams",
+      "activities": "Activities",
+      "yearsActive": "Years Active"
+    },
+    "leadership": "LEADERSHIP",
+    "teams": "TEAMS",
+    "membersCount": "{count} members",
+    "moreMembers": "+{count} more members",
+    "footer": {
+      "rights": "All rights reserved."
+    },
+    "yearsOld": "years old"
   }
 }

@@ -451,5 +451,107 @@
     "submit": "提交",
     "register": "注册",
     "registrationLink": "注册链接"
+  },
+  "partnerEdit": {
+    "title": "合作伙伴网页",
+    "subtitle": "编辑合作伙伴网页上显示的内容",
+    "viewPartner": "查看合作伙伴页面",
+    "edit": "编辑",
+    "preview": "预览",
+    "previewHint": "这是合作伙伴网页上显示内容的预览。点击编辑来开关各部分并添加内容。",
+    "editHint": "勾选要在合作伙伴网页上显示的部分。选中的部分会显示，未选中的会完全隐藏。",
+    "sectionStatus": "显示状态",
+    "locked": "固定",
+    "autoSync": "自动从组织信息同步",
+    "saveAll": "保存所有更改",
+    "saved": "更改已保存！",
+    "displayContent": "显示内容",
+    "hiddenSections": "已隐藏的部分",
+    "yearsOld": "岁",
+    "uploadSlot": "上传图片（剩余 {count} 个位置）",
+    "sections": {
+      "overview": { "label": "总览", "description": "自动从组织信息同步" },
+      "story": { "label": "故事", "description": "自动从组织信息同步" },
+      "members": { "label": "成员", "description": "自动从组织架构同步" },
+      "partners": { "label": "合作伙伴", "description": "自动从组织信息同步" },
+      "feedback": { "label": "学员反馈", "description": "上传反馈图片和信息" },
+      "certificates": { "label": "学员证书", "description": "上传证书图片和信息" },
+      "adBanner": { "label": "广告横幅", "description": "8:3横幅，可调整X/Y位置" }
+    },
+    "feedback": {
+      "title": "学员反馈",
+      "uploadHint": "上传图片",
+      "slotsLeft": "剩余",
+      "slots": "张图片",
+      "fullNamePlaceholder": "姓名",
+      "agePlaceholder": "年龄",
+      "descriptionPlaceholder": "简短描述...",
+      "empty": "暂无图片。上传图片开始。"
+    },
+    "certificates": {
+      "title": "学员证书",
+      "uploadHint": "上传图片",
+      "slotsLeft": "剩余",
+      "slots": "张图片",
+      "fullNamePlaceholder": "姓名",
+      "agePlaceholder": "年龄",
+      "descriptionPlaceholder": "简短描述...",
+      "empty": "暂无图片。上传图片开始。"
+    },
+    "background": {
+      "title": "合作伙伴网页背景",
+      "hint": "背景将是固定的（静止），内容卡片会上下滚动。",
+      "uploadHint": "上传背景图片",
+      "remove": "删除背景"
+    },
+    "adBanner": {
+      "title": "广告横幅 (8:3)",
+      "uploadHint": "上传横幅 (8:3)",
+      "positionX": "水平位置 (X)",
+      "positionY": "垂直位置 (Y)",
+      "left": "左",
+      "centerX": "中",
+      "right": "右",
+      "top": "上",
+      "centerY": "中",
+      "bottom": "下"
+    }
+  },
+  "partner": {
+    "nav": {
+      "overview": "总览",
+      "story": "故事",
+      "members": "成员",
+      "feedback": "反馈",
+      "certificates": "证书"
+    },
+    "sections": {
+      "aboutUs": "关于我们",
+      "story": "故事",
+      "history": "成立历史",
+      "mission": "使命",
+      "achievements": "成就",
+      "partners": "合作伙伴",
+      "partnersSubtitle": "合作伙伴社区 - 共同发展",
+      "feedback": "学员反馈",
+      "feedbackSubtitle": "Huayu Hub 学员的分享",
+      "certificates": "学员证书",
+      "certificatesSubtitle": "Huayu Hub 学员的成就",
+      "members": "核心成员"
+    },
+    "stats": {
+      "members": "成员",
+      "teams": "团队",
+      "activities": "活动",
+      "yearsActive": "活跃年数"
+    },
+    "leadership": "领导层",
+    "teams": "团队",
+    "membersCount": "{count} 名成员",
+    "moreMembers": "还有 {count} 名成员",
+    "footer": {
+      "rights": "保留所有权利。"
+    },
+    "yearsOld": "岁"
   }
 }

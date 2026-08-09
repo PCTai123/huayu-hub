@@ -452,5 +452,107 @@
     "submit": "Gui",
     "register": "Dang ky",
     "registrationLink": "Link dang ky"
+  },
+  "partnerEdit": {
+    "title": "Web doi tac",
+    "subtitle": "Chinh sua noi dung hien thi tren trang web doi tac",
+    "viewPartner": "Xem trang doi tac",
+    "edit": "Chinh sua",
+    "preview": "Xem ban xem truoc",
+    "previewHint": "Day la ban xem truoc noi dung se hien thi tren web doi tac. Nhan Chinh sua de bat/tat cac phan va them noi dung.",
+    "editHint": "Danh dau cac phan muon hien thi tren web doi tac. Phan duoc chon se hien, phan khong chon se bi an hoan toan.",
+    "sectionStatus": "Trang thai hien thi",
+    "locked": "Co dinh",
+    "autoSync": "Tu dong lay tu thong tin to chuc",
+    "saveAll": "Luu tat ca thay doi",
+    "saved": "Da luu thay doi!",
+    "displayContent": "Hien thi noi dung",
+    "hiddenSections": "Cac phan bi an",
+    "yearsOld": "tuoi",
+    "uploadSlot": "Tai anh len (con {count} cho)",
+    "sections": {
+      "overview": { "label": "Tong quan", "description": "Tu dong lay tu thong tin to chuc" },
+      "story": { "label": "Cau chuyen", "description": "Tu dong lay tu thong tin to chuc" },
+      "members": { "label": "Thanh vien", "description": "Tu dong lay tu co cau to chuc" },
+      "partners": { "label": "Doi tac", "description": "Tu dong lay tu thong tin to chuc" },
+      "feedback": { "label": "Feedback hoc vien", "description": "Tai anh va thong tin feedback" },
+      "certificates": { "label": "Chung chi hoc vien", "description": "Tai anh va thong tin chung chi" },
+      "adBanner": { "label": "Banner quang cao", "description": "Banner 8:3, tinh chinh vi tri X/Y" }
+    },
+    "feedback": {
+      "title": "Feedback hoc vien",
+      "uploadHint": "Tai anh len",
+      "slotsLeft": "con",
+      "slots": "anh",
+      "fullNamePlaceholder": "Ho va ten",
+      "agePlaceholder": "Tuoi",
+      "descriptionPlaceholder": "Mo ta ngan...",
+      "empty": "Chua co anh nao. Tai anh len de bat dau."
+    },
+    "certificates": {
+      "title": "Chung chi hoc vien",
+      "uploadHint": "Tai anh len",
+      "slotsLeft": "con",
+      "slots": "anh",
+      "fullNamePlaceholder": "Ho va ten",
+      "agePlaceholder": "Tuoi",
+      "descriptionPlaceholder": "Mo ta ngan...",
+      "empty": "Chua co anh nao. Tai anh len de bat dau."
+    },
+    "background": {
+      "title": "Anh nen web doi tac",
+      "hint": "Anh nen se la tinh (dung yen), cac the noi dung se cuon len xuong.",
+      "uploadHint": "Tai anh nen len",
+      "remove": "Xoa anh nen"
+    },
+    "adBanner": {
+      "title": "Banner quang cao (8:3)",
+      "uploadHint": "Tai banner len (8:3)",
+      "positionX": "Vi tri ngang (X)",
+      "positionY": "Vi tri doc (Y)",
+      "left": "Trai",
+      "centerX": "Giua",
+      "right": "Phai",
+      "top": "Tren",
+      "centerY": "Giua",
+      "bottom": "Duoi"
+    }
+  },
+  "partner": {
+    "nav": {
+      "overview": "Tong quan",
+      "story": "Cau chuyen",
+      "members": "Thanh vien",
+      "feedback": "Feedback",
+      "certificates": "Chung chi"
+    },
+    "sections": {
+      "aboutUs": "Ve chung toi",
+      "story": "Cau chuyen",
+      "history": "Lich su hinh thanh",
+      "mission": "Su menh",
+      "achievements": "Thanh tich",
+      "partners": "Doi tac",
+      "partnersSubtitle": "Cong dong hanh - Cung phat trien",
+      "feedback": "Feedback hoc vien",
+      "feedbackSubtitle": "Nhung chia se tu hoc vien cua Huayu Hub",
+      "certificates": "Chung chi hoc vien",
+      "certificatesSubtitle": "Thanh tich cua hoc vien Huayu Hub",
+      "members": "Thanh vien chu chot"
+    },
+    "stats": {
+      "members": "Thanh vien",
+      "teams": "Doi nhom",
+      "activities": "Hoat dong",
+      "yearsActive": "Nam hoat dong"
+    },
+    "leadership": "LEADERSHIP",
+    "teams": "TEAMS",
+    "membersCount": "{count} thanh vien",
+    "moreMembers": "+{count} thanh vien khac",
+    "footer": {
+      "rights": "All rights reserved."
+    },
+    "yearsOld": "tuoi"
   }
 }

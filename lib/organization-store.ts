@@ -10,6 +10,32 @@ export interface SocialLink {
   url: string;
 }
 
+export interface FeedbackImage {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  age: string;
+  description: string;
+}
+
+export interface CertificateImage {
+  id: string;
+  imageUrl: string;
+  fullName: string;
+  age: string;
+  description: string;
+}
+
+export interface SectionVisibility {
+  overview: boolean;
+  story: boolean;
+  members: boolean;
+  partners: boolean;
+  feedback: boolean;
+  certificates: boolean;
+  adBanner: boolean;
+}
+
 export interface OrganizationData {
   id: string;
   name: string;
@@ -19,7 +45,7 @@ export interface OrganizationData {
   website: string;
   avatarUrl?: string;
   bannerUrl?: string;
-  bannerPosition?: string; // CSS object-position, e.g. "center 30%"
+  bannerPosition?: string;
   story: string;
   history: string;
   mission: string;
@@ -32,6 +58,13 @@ export interface OrganizationData {
     activities: number;
     yearsActive: number;
   };
+  // Partner page custom fields
+  feedbackImages: FeedbackImage[];
+  certificateImages: CertificateImage[];
+  backgroundUrl?: string;
+  adBannerUrl?: string;
+  adBannerPosition?: string;
+  sectionVisibility: SectionVisibility;
 }
 
 const STORAGE_KEY = "huayu-hub-organization";
@@ -46,23 +79,23 @@ const DEFAULT_DATA: OrganizationData = {
   avatarUrl: "",
   bannerUrl: "",
   story:
-    "Huayu Hub được thành lập từ niềm đam mê với AI và ngôn ngữ Trung Quốc, với mong muốn xây dựng một cộng đồng học tập hiện đại, sáng tạo và kết nối.",
+    "Huayu Hub duoc thanh lap tu niem dam me voi AI va ngon ngu Trung Quoc, voi mong muon xay dung mot cong dong hoc tap hien dai, sang tao va ket noi.",
   history:
-    "Từ những buổi học nhỏ lẻ, Huayu Hub dần phát triển thành một cộng đồng học tập và nghiên cứu AI – Tiếng Trung uy tín và chuyên nghiệp.",
+    "Tu nhung buoi hoc nho le, Huayu Hub dan phat trien thanh mot cong dong hoc tap va nghien cuu AI - Tieng Trung uy tin va chuyen nghiep.",
   mission:
-    "Kết nối tri thức – Phát triển con người – Ứng dụng AI để thay đổi cách chúng ta học tập và làm việc với ngôn ngữ Trung Quốc.",
+    "Ket noi tri thuc - Phat trien con nguoi - Ung dung AI de thay doi cach chung ta hoc tap va lam viec voi ngon ngu Trung Quoc.",
   achievements: [
-    "Hơn 100+ thành viên tích cực",
-    "Tổ chức 30+ sự kiện học thuật",
-    "Hợp tác với 10+ trường đại học",
-    "Được truyền thông và cộng đồng đánh giá cao",
+    "Hon 100+ thanh vien tich cuc",
+    "To chuc 30+ su kien hoc thuat",
+    "Hop tac voi 10+ truong dai hoc",
+    "Duoc truyen thong va cong dong danh gia cao",
   ],
   partners: [
     { id: "p1", name: "Datawhale", website: "https://datawhale.cn", logoUrl: "" },
     { id: "p2", name: "SenseTime", website: "https://www.sensetime.com", logoUrl: "" },
     { id: "p3", name: "Tencent", website: "https://www.tencent.com", logoUrl: "" },
     { id: "p4", name: "Bilibili", website: "https://www.bilibili.com", logoUrl: "" },
-    { id: "p5", name: "Netease", website: "https://www.163.com", logoUrl: "" },
+    { id: "p5", name: "Netease", website: "https://163.com", logoUrl: "" },
   ],
   socialLinks: [
     { platform: "Facebook", url: "facebook.com/huayuhub" },
@@ -76,6 +109,20 @@ const DEFAULT_DATA: OrganizationData = {
     teams: 6,
     activities: 38,
     yearsActive: 2,
+  },
+  feedbackImages: [],
+  certificateImages: [],
+  backgroundUrl: "",
+  adBannerUrl: "",
+  adBannerPosition: "center center",
+  sectionVisibility: {
+    overview: true,
+    story: true,
+    members: true,
+    partners: true,
+    feedback: false,
+    certificates: false,
+    adBanner: false,
   },
 };
 
@@ -165,4 +212,67 @@ export function subscribeToOrganization(fn: (data: OrganizationData) => void) {
   listeners.add(fn);
   fn(orgData);
   return () => listeners.delete(fn);
+}
+
+// ── Feedback Images ──
+export function addFeedbackImage(img: Omit<FeedbackImage, "id">) {
+  const newItem: FeedbackImage = { ...img, id: `fb-${Date.now()}` };
+  orgData.feedbackImages = [...orgData.feedbackImages, newItem];
+  saveToStorage(orgData);
+  notify();
+}
+
+export function updateFeedbackImage(id: string, updates: Partial<FeedbackImage>) {
+  orgData.feedbackImages = orgData.feedbackImages.map((f) =>
+    f.id === id ? { ...f, ...updates } : f
+  );
+  saveToStorage(orgData);
+  notify();
+}
+
+export function deleteFeedbackImage(id: string) {
+  orgData.feedbackImages = orgData.feedbackImages.filter((f) => f.id !== id);
+  saveToStorage(orgData);
+  notify();
+}
+
+// ── Certificate Images ──
+export function addCertificateImage(img: Omit<CertificateImage, "id">) {
+  const newItem: CertificateImage = { ...img, id: `cert-${Date.now()}` };
+  orgData.certificateImages = [...orgData.certificateImages, newItem];
+  saveToStorage(orgData);
+  notify();
+}
+
+export function updateCertificateImage(id: string, updates: Partial<CertificateImage>) {
+  orgData.certificateImages = orgData.certificateImages.map((c) =>
+    c.id === id ? { ...c, ...updates } : c
+  );
+  saveToStorage(orgData);
+  notify();
+}
+
+export function deleteCertificateImage(id: string) {
+  orgData.certificateImages = orgData.certificateImages.filter((c) => c.id !== id);
+  saveToStorage(orgData);
+  notify();
+}
+
+// ── Section Visibility ──
+export function updateSectionVisibility(updates: Partial<SectionVisibility>) {
+  orgData.sectionVisibility = { ...orgData.sectionVisibility, ...updates };
+  saveToStorage(orgData);
+  notify();
+}
+
+export function setFeedbackImages(images: FeedbackImage[]) {
+  orgData.feedbackImages = images.slice(0, 10);
+  saveToStorage(orgData);
+  notify();
+}
+
+export function setCertificateImages(images: CertificateImage[]) {
+  orgData.certificateImages = images.slice(0, 10);
+  saveToStorage(orgData);
+  notify();
 }

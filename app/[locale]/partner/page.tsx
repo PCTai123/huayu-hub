@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   Building2,
@@ -16,6 +17,9 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  MessageSquare,
+  Award,
+  Megaphone,
 } from "lucide-react";
 import {
   getOrganization,
@@ -23,6 +27,8 @@ import {
   type OrganizationData,
   type Partner,
   type SocialLink,
+  type FeedbackImage,
+  type CertificateImage,
 } from "@/lib/organization-store";
 import { getMembers, subscribeToMembers, type Member } from "@/lib/member-service";
 
@@ -113,10 +119,120 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 }
 
 /* ════════════════════════════════════════════ */
+/*           INFINITE CAROUSEL                  */
+/* ════════════════════════════════════════════ */
+
+function InfiniteCarousel({
+  images,
+  yearsOldLabel,
+}: {
+  images: (FeedbackImage | CertificateImage)[];
+  yearsOldLabel: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
+
+  useEffect(() => {
+    if (isPaused || images.length <= 5) return;
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    let animationId: number;
+    let startTime: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+
+      if (elapsed > 16) {
+        if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth / 2) {
+          scrollContainer.scrollLeft = 0;
+        } else {
+          scrollContainer.scrollLeft += 1;
+        }
+        startTime = timestamp;
+      }
+      animationId = requestAnimationFrame(animate);
+    };
+
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
+  }, [isPaused, images.length]);
+
+  // Duplicate images for infinite loop
+  const displayImages = images.length > 5 ? [...images, ...images] : images;
+
+  // Split into 2 rows
+  const midPoint = Math.ceil(displayImages.length / 2);
+  const row1 = displayImages.slice(0, midPoint);
+  const row2 = displayImages.slice(midPoint);
+
+  return (
+    <div
+      className="space-y-3"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <CarouselRow images={row1} scrollRef={scrollRef} yearsOldLabel={yearsOldLabel} />
+      {row2.length > 0 && <CarouselRow images={row2} scrollRef={null} yearsOldLabel={yearsOldLabel} />}
+    </div>
+  );
+}
+
+function CarouselRow({
+  images,
+  scrollRef,
+  yearsOldLabel,
+}: {
+  images: (FeedbackImage | CertificateImage)[];
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  yearsOldLabel: string;
+}) {
+  return (
+    <div
+      ref={scrollRef}
+      className="flex gap-4 overflow-x-auto scrollbar-hide"
+      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+    >
+      {images.map((img, idx) => (
+        <div
+          key={`${img.id}-${idx}`}
+          className="flex-shrink-0 w-48 sm:w-56 rounded-2xl overflow-hidden border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow group"
+        >
+          {/* Image */}
+          <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+            <img
+              src={img.imageUrl}
+              alt={img.fullName || `Image ${idx + 1}`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+          {/* Info */}
+          <div className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <h4 className="text-sm font-bold text-[#2D2D2D] truncate">
+                {img.fullName || ""}
+              </h4>
+              {img.age && (
+                <span className="text-xs text-gray-400 shrink-0">
+                  {img.age} {yearsOldLabel}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 line-clamp-2">
+              {img.description || ""}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════ */
 /*                    MAIN PAGE                 */
 /* ════════════════════════════════════════════ */
 
-// Team icon & color mapping
 const TEAM_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   media: { color: "text-red-500", bg: "bg-red-50", label: "Media" },
   design: { color: "text-orange-500", bg: "bg-orange-50", label: "Design" },
@@ -140,12 +256,11 @@ const teamNameToId: Record<string, string> = {
 export default function PartnerPage() {
   const pathname = usePathname();
   const locale = pathname.split("/")[1] || "vi";
+  const t = useTranslations("partner");
 
-  /* Data states */
   const [org, setOrg] = useState<OrganizationData | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
 
-  /* Accordion states */
   const [openSection, setOpenSection] = useState<Record<string, boolean>>({
     story: true,
     history: true,
@@ -153,14 +268,11 @@ export default function PartnerPage() {
     achievements: true,
   });
 
-  /* Load data */
   useEffect(() => {
     setOrg(getOrganization());
     setMembers(getMembers());
-
     const unsubOrg = subscribeToOrganization((d) => setOrg(d));
     const unsubMem = subscribeToMembers((m) => setMembers(m));
-
     return () => {
       unsubOrg();
       unsubMem();
@@ -172,7 +284,6 @@ export default function PartnerPage() {
   const toggle = (key: string) =>
     setOpenSection((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  /* ── Org Chart Data ── */
   const founder = members.find((m) => m.role === "Founder");
   const coFounders = members.filter((m) => m.role === "Co-Founder");
   const teamMembers = members.filter((m) => m.role !== "Founder" && m.role !== "Co-Founder");
@@ -192,420 +303,486 @@ export default function PartnerPage() {
       members: teamMembers,
     }));
 
-  /* ─────────────── Navbar ─────────────── */
+  const vis = org.sectionVisibility;
+  const hasBackground = !!org.backgroundUrl;
+
   const navLinks = [
-    { label: "Tổng quan", href: "#overview" },
-    { label: "Câu chuyện", href: "#story" },
-    { label: "Thành viên", href: "#members" },
+    ...(vis.overview ? [{ label: t("nav.overview"), href: "#overview" }] : []),
+    ...(vis.story ? [{ label: t("nav.story"), href: "#story" }] : []),
+    ...(vis.members ? [{ label: t("nav.members"), href: "#members" }] : []),
+    ...(vis.feedback ? [{ label: t("nav.feedback"), href: "#feedback" }] : []),
+    ...(vis.certificates ? [{ label: t("nav.certificates"), href: "#certificates" }] : []),
   ];
 
   return (
-    <div className="min-h-screen bg-[#F6F1E8]">
-      {/* ── Sticky Header ── */}
-      <header className="sticky top-0 z-50 bg-[#F6F1E8]/90 backdrop-blur-md border-b border-[#C62828]/10">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo */}
-          <Link href={`/${locale}/partner`} className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#C62828] flex items-center justify-center text-white font-bold text-sm">
-              H
-            </div>
-            <span className="font-bold text-[#C62828] text-lg hidden sm:inline" style={{ fontFamily: "var(--font-poppins)" }}>
-              Huayu Hub
-            </span>
-          </Link>
+    <div
+      className="min-h-screen relative"
+      style={{
+        backgroundColor: "#F6F1E8",
+        backgroundImage: hasBackground ? `url(${org.backgroundUrl})` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center center",
+        backgroundAttachment: "fixed",
+        backgroundRepeat: "no-repeat",
+      }}
+    >
+      {/* Overlay for readability when background is set */}
+      {hasBackground && (
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{
+            backgroundColor: "rgba(246, 241, 232, 0.85)",
+            zIndex: 0,
+          }}
+        />
+      )}
 
-          {/* Nav */}
-          <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-[#C62828] hover:bg-[#C62828]/5 transition-colors"
+      <div className="relative" style={{ zIndex: 1 }}>
+        {/* ── Sticky Header ── */}
+        <header className="sticky top-0 z-50 bg-[#F6F1E8]/90 backdrop-blur-md border-b border-[#C62828]/10">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <Link href={`/${locale}/partner`} className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-[#C62828] flex items-center justify-center text-white font-bold text-sm">
+                H
+              </div>
+              <span className="font-bold text-[#C62828] text-lg hidden sm:inline" style={{ fontFamily: "var(--font-poppins)" }}>
+                Huayu Hub
+              </span>
+            </Link>
+
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-[#C62828] hover:bg-[#C62828]/5 transition-colors"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="w-8" />
+          </div>
+        </header>
+
+        <main className="max-w-5xl mx-auto px-4 py-8 space-y-12">
+          {/* ═══════════ OVERVIEW ═══════════ */}
+          {vis.overview && (
+            <section id="overview">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
               >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Empty right side - no login button */}
-          <div className="w-8" />
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-12">
-        {/* ═══════════ OVERVIEW (Hero) ═══════════ */}
-        <section id="overview">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
-          >
-            {/* Banner - Facebook ratio 851:315 */}
-            <div
-              className="relative w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50"
-              style={{ aspectRatio: "851 / 315" }}
-            >
-              {org.bannerUrl ? (
-                <img
-                  src={org.bannerUrl}
-                  alt="Banner"
-                  className="w-full h-full object-cover"
-                  style={{ objectPosition: org.bannerPosition || "center" }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Building2 className="w-16 h-16 text-[#C62828]/20" />
-                </div>
-              )}
-            </div>
-
-            {/* Avatar + Info */}
-            <div className="px-6 pb-6">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 relative z-10">
-                {/* Avatar */}
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white shrink-0">
-                  {org.avatarUrl ? (
-                    <img src={org.avatarUrl} alt={org.name} className="w-full h-full object-cover" />
+                {/* Banner */}
+                <div
+                  className="relative w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50"
+                  style={{ aspectRatio: "851 / 315" }}
+                >
+                  {org.bannerUrl ? (
+                    <img
+                      src={org.bannerUrl}
+                      alt="Banner"
+                      className="w-full h-full object-cover"
+                      style={{ objectPosition: org.bannerPosition || "center" }}
+                    />
                   ) : (
-                    <div className="w-full h-full bg-[#C62828] flex items-center justify-center text-white font-bold text-2xl">
-                      {org.name.charAt(0)}
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="w-16 h-16 text-[#C62828]/20" />
                     </div>
                   )}
                 </div>
 
-                {/* Name + Tagline */}
-                <div className="flex-1 pb-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2D2D]">
-                    {org.name}
-                  </h1>
-                  <p className="text-[#C62828] font-medium">
-                    {org.tagline}
-                  </p>
-                </div>
-              </div>
-
-              {/* Social Links Row */}
-              {org.socialLinks.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {org.socialLinks.map((link) => (
-                    <a
-                      key={link.platform}
-                      href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#C62828] hover:text-[#C62828] transition-colors text-sm text-gray-600"
-                    >
-                      {SOCIAL_ICONS[link.platform] || <Globe className="w-4 h-4" />}
-                      <span className="hidden sm:inline">{link.platform}</span>
-                    </a>
-                  ))}
-                </div>
-              )}
-
-              {/* Quick info chips */}
-              <div className="flex flex-wrap gap-3 mt-4">
-                {[
-                  { icon: MapPin, text: org.location },
-                  { icon: Mail, text: org.email },
-                  { icon: Globe, text: org.website },
-                ].map((item) => (
-                  <div
-                    key={item.text}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-600"
-                  >
-                    <item.icon className="w-4 h-4 text-[#C62828]" />
-                    {item.text}
+                {/* Avatar + Info */}
+                <div className="px-6 pb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 relative z-10">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white shrink-0">
+                      {org.avatarUrl ? (
+                        <img src={org.avatarUrl} alt={org.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-[#C62828] flex items-center justify-center text-white font-bold text-2xl">
+                          {org.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2D2D]">
+                        {org.name}
+                      </h1>
+                      <p className="text-[#C62828] font-medium">
+                        {org.tagline}
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </section>
 
-        {/* ═══════════ STATS ═══════════ */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: "Thành viên", value: `${org.stats.members}+`, icon: Users },
-            { label: "Đội nhóm", value: org.stats.teams, icon: Users },
-            { label: "Hoạt động", value: `${org.stats.activities}+`, icon: CalendarDays },
-            { label: "Năm hoạt động", value: `${org.stats.yearsActive}+`, icon: CalendarDays },
-          ].map((stat) => (
-            <Card key={stat.label}>
-              <div className="p-5 text-center">
-                <stat.icon className="w-6 h-6 text-[#C62828] mx-auto mb-2" />
-                <div className="text-2xl font-bold text-[#2D2D2D]">{stat.value}</div>
-                <div className="text-xs text-gray-500 mt-1">{stat.label}</div>
-              </div>
-            </Card>
-          ))}
-        </div>
+                  {/* Social Links */}
+                  {org.socialLinks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {org.socialLinks.map((link) => (
+                        <a
+                          key={link.platform}
+                          href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#C62828] hover:text-[#C62828] transition-colors text-sm text-gray-600"
+                        >
+                          {SOCIAL_ICONS[link.platform] || <Globe className="w-4 h-4" />}
+                          <span className="hidden sm:inline">{link.platform}</span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
 
-        {/* ═══════════ STORY / HISTORY / MISSION ═══════════ */}
-        <Section id="story" title="Về chúng tôi" icon={BookOpen}>
-          <div className="space-y-4">
-            {/* Story */}
-            <Card>
-              <button
-                onClick={() => toggle("story")}
-                className="w-full flex items-center justify-between p-5 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <BookOpen className="w-5 h-5 text-[#C62828]" />
-                  <span className="font-semibold text-[#2D2D2D]">Câu chuyện</span>
-                </div>
-                {openSection.story ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-              </button>
-              {openSection.story && (
-                <div className="px-5 pb-5">
-                  <p className="text-gray-600 leading-relaxed">{org.story}</p>
-                </div>
-              )}
-            </Card>
-
-            {/* History */}
-            <Card>
-              <button
-                onClick={() => toggle("history")}
-                className="w-full flex items-center justify-between p-5 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <CalendarDays className="w-5 h-5 text-[#C62828]" />
-                  <span className="font-semibold text-[#2D2D2D]">Lịch sử hình thành</span>
-                </div>
-                {openSection.history ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-              </button>
-              {openSection.history && (
-                <div className="px-5 pb-5">
-                  <p className="text-gray-600 leading-relaxed">{org.history}</p>
-                </div>
-              )}
-            </Card>
-
-            {/* Mission */}
-            <Card>
-              <button
-                onClick={() => toggle("mission")}
-                className="w-full flex items-center justify-between p-5 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <Target className="w-5 h-5 text-[#C62828]" />
-                  <span className="font-semibold text-[#2D2D2D]">Sứ mệnh</span>
-                </div>
-                {openSection.mission ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-              </button>
-              {openSection.mission && (
-                <div className="px-5 pb-5">
-                  <p className="text-gray-600 leading-relaxed">{org.mission}</p>
-                </div>
-              )}
-            </Card>
-
-            {/* Achievements */}
-            <Card>
-              <button
-                onClick={() => toggle("achievements")}
-                className="w-full flex items-center justify-between p-5 text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <Trophy className="w-5 h-5 text-[#C62828]" />
-                  <span className="font-semibold text-[#2D2D2D]">Thành tích</span>
-                </div>
-                {openSection.achievements ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-              </button>
-              {openSection.achievements && (
-                <div className="px-5 pb-5">
-                  <ul className="space-y-2">
-                    {org.achievements.map((ach, i) => (
-                      <li key={i} className="flex items-start gap-2 text-gray-600">
-                        <Trophy className="w-4 h-4 text-[#C62828] shrink-0 mt-0.5" />
-                        {ach}
-                      </li>
+                  {/* Quick info chips */}
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    {[
+                      { icon: MapPin, text: org.location },
+                      { icon: Mail, text: org.email },
+                      { icon: Globe, text: org.website },
+                    ].map((item) => (
+                      <div
+                        key={item.text}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-600"
+                      >
+                        <item.icon className="w-4 h-4 text-[#C62828]" />
+                        {item.text}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
-              )}
-            </Card>
-          </div>
-        </Section>
+              </motion.div>
+            </section>
+          )}
 
-        {/* ═══════════ PARTNERS ═══════════ */}
-        <Section id="partners" title="Đối tác" icon={Globe}>
-          <Card>
-            <div className="p-5">
-              <p className="text-sm text-gray-500 mb-4">Cộng đồng hành – Cùng phát triển</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {org.partners.map((partner) => (
-                  <a
-                    key={partner.id}
-                    href={partner.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex flex-col items-center p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-sm transition-all group"
+          {/* ═══════════ AD BANNER ═══════════ */}
+          {vis.adBanner && org.adBannerUrl && (
+            <section id="ad-banner">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
+                style={{ aspectRatio: "8 / 3" }}
+              >
+                <img
+                  src={org.adBannerUrl}
+                  alt="Advertisement"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: org.adBannerPosition || "center center" }}
+                />
+              </motion.div>
+            </section>
+          )}
+
+          {/* ═══════════ STATS ═══════════ */}
+          {vis.overview && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                { label: t("stats.members"), value: `${org.stats.members}+`, icon: Users },
+                { label: t("stats.teams"), value: org.stats.teams, icon: Users },
+                { label: t("stats.activities"), value: `${org.stats.activities}+`, icon: CalendarDays },
+                { label: t("stats.yearsActive"), value: `${org.stats.yearsActive}+`, icon: CalendarDays },
+              ].map((stat) => (
+                <Card key={stat.label}>
+                  <div className="p-5 text-center">
+                    <stat.icon className="w-6 h-6 text-[#C62828] mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-[#2D2D2D]">{stat.value}</div>
+                    <div className="text-xs text-gray-500 mt-1">{stat.label}</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* ═══════════ STORY ═══════════ */}
+          {vis.story && (
+            <Section id="story" title={t("sections.aboutUs")} icon={BookOpen}>
+              <div className="space-y-4">
+                <Card>
+                  <button
+                    onClick={() => toggle("story")}
+                    className="w-full flex items-center justify-between p-5 text-left"
                   >
-                    <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center mb-2 group-hover:bg-[#C62828]/20 transition-colors">
-                      <Globe className="w-6 h-6 text-[#C62828]" />
+                    <div className="flex items-center gap-3">
+                      <BookOpen className="w-5 h-5 text-[#C62828]" />
+                      <span className="font-semibold text-[#2D2D2D]">{t("sections.story")}</span>
                     </div>
-                    <span className="text-sm font-medium text-gray-700 text-center">{partner.name}</span>
-                    <span className="text-xs text-gray-400 mt-1 truncate max-w-full">{partner.website.replace(/^https?:\/\//, "")}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </Section>
-
-        {/* ═══════════ MEMBERS (Org Chart Tree) ═══════════ */}
-        <Section id="members" title="Thành viên chủ chốt" icon={Users}>
-          <div className="space-y-8">
-            {/* Leadership Section */}
-            {(founder || coFounders.length > 0) && (
-              <div>
-                <div className="flex items-center justify-center mb-4">
-                  <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
-                    LEADERSHIP
-                  </div>
-                </div>
-
-                <div className="flex justify-center gap-6 flex-wrap">
-                  {/* Founder */}
-                  {founder && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5 }}
-                      className="bg-white rounded-2xl border-2 border-[#C62828] shadow-lg p-5 w-56 text-center"
-                    >
-                      <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
-                        {founder.avatarUrl ? (
-                          <img src={founder.avatarUrl} alt={founder.fullName} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-[#C62828]/10 flex items-center justify-center text-[#C62828] font-bold text-xl">
-                            {founder.fullName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-black text-sm">{founder.fullName}</h3>
-                      <span className="text-xs text-[#C62828] font-medium mt-0.5 inline-block">{founder.role}</span>
-                      <p className="text-xs text-gray-400 mt-1">{founder.team}</p>
-                    </motion.div>
+                    {openSection.story ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  </button>
+                  {openSection.story && (
+                    <div className="px-5 pb-5">
+                      <p className="text-gray-600 leading-relaxed">{org.story}</p>
+                    </div>
                   )}
+                </Card>
 
-                  {/* Co-Founders */}
-                  {coFounders.map((cf, idx) => (
-                    <motion.div
-                      key={cf.id}
-                      initial={{ opacity: 0, y: -20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.1 * (idx + 1) }}
-                      className="bg-white rounded-2xl border-2 border-amber-400 shadow-lg p-5 w-56 text-center"
-                    >
-                      <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
-                        {cf.avatarUrl ? (
-                          <img src={cf.avatarUrl} alt={cf.fullName} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl">
-                            {cf.fullName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-black text-sm">{cf.fullName}</h3>
-                      <span className="text-xs text-amber-600 font-medium mt-0.5 inline-block">{cf.role}</span>
-                      <p className="text-xs text-gray-400 mt-1">{cf.team}</p>
-                    </motion.div>
-                  ))}
-                </div>
+                <Card>
+                  <button
+                    onClick={() => toggle("history")}
+                    className="w-full flex items-center justify-between p-5 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="w-5 h-5 text-[#C62828]" />
+                      <span className="font-semibold text-[#2D2D2D]">{t("sections.history")}</span>
+                    </div>
+                    {openSection.history ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  </button>
+                  {openSection.history && (
+                    <div className="px-5 pb-5">
+                      <p className="text-gray-600 leading-relaxed">{org.history}</p>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <button
+                    onClick={() => toggle("mission")}
+                    className="w-full flex items-center justify-between p-5 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Target className="w-5 h-5 text-[#C62828]" />
+                      <span className="font-semibold text-[#2D2D2D]">{t("sections.mission")}</span>
+                    </div>
+                    {openSection.mission ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  </button>
+                  {openSection.mission && (
+                    <div className="px-5 pb-5">
+                      <p className="text-gray-600 leading-relaxed">{org.mission}</p>
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <button
+                    onClick={() => toggle("achievements")}
+                    className="w-full flex items-center justify-between p-5 text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Trophy className="w-5 h-5 text-[#C62828]" />
+                      <span className="font-semibold text-[#2D2D2D]">{t("sections.achievements")}</span>
+                    </div>
+                    {openSection.achievements ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                  </button>
+                  {openSection.achievements && (
+                    <div className="px-5 pb-5">
+                      <ul className="space-y-2">
+                        {org.achievements.map((ach, i) => (
+                          <li key={i} className="flex items-start gap-2 text-gray-600">
+                            <Trophy className="w-4 h-4 text-[#C62828] shrink-0 mt-0.5" />
+                            {ach}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </Card>
               </div>
-            )}
+            </Section>
+          )}
 
-            {/* Connector */}
-            {(founder || coFounders.length > 0) && teams.length > 0 && (
-              <div className="flex justify-center">
-                <div className="w-0.5 h-8 bg-gray-300" />
-              </div>
-            )}
-
-            {/* Teams Section */}
-            {teams.length > 0 && (
-              <div>
-                <div className="flex items-center justify-center mb-4">
-                  <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
-                    TEAMS
+          {/* ═══════════ PARTNERS ═══════════ */}
+          {vis.partners && (
+            <Section id="partners" title={t("sections.partners")} icon={Globe}>
+              <Card>
+                <div className="p-5">
+                  <p className="text-sm text-gray-500 mb-4">{t("sections.partnersSubtitle")}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    {org.partners.map((partner) => (
+                      <a
+                        key={partner.id}
+                        href={partner.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-sm transition-all group"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center mb-2 group-hover:bg-[#C62828]/20 transition-colors">
+                          <Globe className="w-6 h-6 text-[#C62828]" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 text-center">{partner.name}</span>
+                        <span className="text-xs text-gray-400 mt-1 truncate max-w-full">{partner.website.replace(/^https?:\/\//, "")}</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
+              </Card>
+            </Section>
+          )}
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                  {teams.map((team, idx) => (
-                    <motion.div
-                      key={team.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: idx * 0.05 }}
-                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
-                    >
-                      {/* Team header */}
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={`p-1.5 rounded-lg ${team.config.bg}`}>
-                          <Users className={`w-4 h-4 ${team.config.color}`} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-700">{team.config.label}</div>
-                          <div className="text-xs text-gray-400">{team.members.length} thành viên</div>
-                        </div>
-                      </div>
-
-                      {/* Members list */}
-                      <div className="space-y-2">
-                        {team.members.slice(0, 4).map((member) => (
-                          <div key={member.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50">
-                            <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
-                              {member.avatarUrl ? (
-                                <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
-                              ) : (
-                                <span className="text-xs font-bold text-gray-400">{member.fullName.charAt(0)}</span>
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-xs font-medium text-gray-700 truncate">{member.fullName}</div>
-                              <div className="text-[10px] text-[#C62828]">{member.role}</div>
-                            </div>
-                          </div>
-                        ))}
-                        {team.members.length > 4 && (
-                          <div className="text-xs text-gray-400 text-center py-1">
-                            +{team.members.length - 4} thành viên khác
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
+          {/* ═══════════ FEEDBACK ═══════════ */}
+          {vis.feedback && org.feedbackImages.length > 0 && (
+            <Section id="feedback" title={t("sections.feedback")} icon={MessageSquare}>
+              <Card>
+                <div className="p-5">
+                  <p className="text-sm text-gray-500 mb-4">
+                    {t("sections.feedbackSubtitle")}
+                  </p>
+                  <InfiniteCarousel images={org.feedbackImages} yearsOldLabel={t("yearsOld")} />
                 </div>
-              </div>
-            )}
-          </div>
-        </Section>
+              </Card>
+            </Section>
+          )}
 
-        {/* ═══════════ FOOTER ═══════════ */}
-        <footer className="border-t border-gray-200 pt-8 pb-12 text-center">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-[#C62828] flex items-center justify-center text-white font-bold text-sm">
-              H
+          {/* ═══════════ CERTIFICATES ═══════════ */}
+          {vis.certificates && org.certificateImages.length > 0 && (
+            <Section id="certificates" title={t("sections.certificates")} icon={Award}>
+              <Card>
+                <div className="p-5">
+                  <p className="text-sm text-gray-500 mb-4">
+                    {t("sections.certificatesSubtitle")}
+                  </p>
+                  <InfiniteCarousel images={org.certificateImages} yearsOldLabel={t("yearsOld")} />
+                </div>
+              </Card>
+            </Section>
+          )}
+
+          {/* ═══════════ MEMBERS ═══════════ */}
+          {vis.members && (
+            <Section id="members" title={t("sections.members")} icon={Users}>
+              <div className="space-y-8">
+                {(founder || coFounders.length > 0) && (
+                  <div>
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
+                        {t("leadership")}
+                      </div>
+                    </div>
+                    <div className="flex justify-center gap-6 flex-wrap">
+                      {founder && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5 }}
+                          className="bg-white rounded-2xl border-2 border-[#C62828] shadow-lg p-5 w-56 text-center"
+                        >
+                          <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
+                            {founder.avatarUrl ? (
+                              <img src={founder.avatarUrl} alt={founder.fullName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-[#C62828]/10 flex items-center justify-center text-[#C62828] font-bold text-xl">
+                                {founder.fullName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <h3 className="font-bold text-black text-sm">{founder.fullName}</h3>
+                          <span className="text-xs text-[#C62828] font-medium mt-0.5 inline-block">{founder.role}</span>
+                          <p className="text-xs text-gray-400 mt-1">{founder.team}</p>
+                        </motion.div>
+                      )}
+
+                      {coFounders.map((cf, idx) => (
+                        <motion.div
+                          key={cf.id}
+                          initial={{ opacity: 0, y: -20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: 0.1 * (idx + 1) }}
+                          className="bg-white rounded-2xl border-2 border-amber-400 shadow-lg p-5 w-56 text-center"
+                        >
+                          <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
+                            {cf.avatarUrl ? (
+                              <img src={cf.avatarUrl} alt={cf.fullName} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl">
+                                {cf.fullName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <h3 className="font-bold text-black text-sm">{cf.fullName}</h3>
+                          <span className="text-xs text-amber-600 font-medium mt-0.5 inline-block">{cf.role}</span>
+                          <p className="text-xs text-gray-400 mt-1">{cf.team}</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(founder || coFounders.length > 0) && teams.length > 0 && (
+                  <div className="flex justify-center">
+                    <div className="w-0.5 h-8 bg-gray-300" />
+                  </div>
+                )}
+
+                {teams.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
+                        {t("teams")}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      {teams.map((team, idx) => (
+                        <motion.div
+                          key={team.id}
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: idx * 0.05 }}
+                          className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`p-1.5 rounded-lg ${team.config.bg}`}>
+                              <Users className={`w-4 h-4 ${team.config.color}`} />
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold text-gray-700">{team.config.label}</div>
+                              <div className="text-xs text-gray-400">{t("membersCount", { count: team.members.length })}</div>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {team.members.slice(0, 4).map((member) => (
+                              <div key={member.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50">
+                                <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                                  {member.avatarUrl ? (
+                                    <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs font-bold text-gray-400">{member.fullName.charAt(0)}</span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-medium text-gray-700 truncate">{member.fullName}</div>
+                                  <div className="text-[10px] text-[#C62828]">{member.role}</div>
+                                </div>
+                              </div>
+                            ))}
+                            {team.members.length > 4 && (
+                              <div className="text-xs text-gray-400 text-center py-1">
+                                {t("moreMembers", { count: team.members.length - 4 })}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
+          {/* ═══════════ FOOTER ═══════════ */}
+          <footer className="border-t border-gray-200 pt-8 pb-12 text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-[#C62828] flex items-center justify-center text-white font-bold text-sm">
+                H
+              </div>
+              <span className="font-bold text-[#2D2D2D]" style={{ fontFamily: "var(--font-poppins)" }}>
+                Huayu Hub
+              </span>
             </div>
-            <span className="font-bold text-[#2D2D2D]" style={{ fontFamily: "var(--font-poppins)" }}>
-              Huayu Hub
-            </span>
-          </div>
-          <p className="text-sm text-gray-500 mb-4">{org.tagline}</p>
-          <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
-            <span>{org.email}</span>
-            <span>•</span>
-            <span>{org.website}</span>
-          </div>
-          <p className="text-xs text-gray-400 mt-4">
-            © 2026 {org.name}. All rights reserved.
-          </p>
-        </footer>
-      </main>
+            <p className="text-sm text-gray-500 mb-4">{org.tagline}</p>
+            <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+              <span>{org.email}</span>
+              <span>.</span>
+              <span>{org.website}</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-4">
+              (c) 2026 {org.name}. {t("footer.rights")}
+            </p>
+          </footer>
+        </main>
+      </div>
     </div>
   );
 }
