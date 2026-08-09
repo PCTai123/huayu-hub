@@ -2,25 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Building2,
   Globe,
   Mail,
   MapPin,
-  ExternalLink,
   BookOpen,
   CalendarDays,
   Target,
   Trophy,
   Users,
-  Newspaper,
-  Activity,
   ChevronDown,
   ChevronUp,
-  LogIn,
-  Link as LinkIcon,
 } from "lucide-react";
 import {
   getOrganization,
@@ -30,11 +25,8 @@ import {
   type SocialLink,
 } from "@/lib/organization-store";
 import { getMembers, subscribeToMembers, type Member } from "@/lib/member-service";
-import { getPosts, subscribeToPosts, type Post } from "@/lib/news-feed-store";
-import { getActivities, subscribeToActivities } from "@/lib/activity-store";
-import type { Activity as ActivityType } from "@/features/activities/components/activity-card";
 
-/* ───────────────────── helpers ───────────────────── */
+/* ───────────────────── Social SVG icons ───────────────────── */
 
 function FacebookIcon({ className }: { className?: string }) {
   return (
@@ -124,16 +116,34 @@ function Card({ children, className = "" }: { children: React.ReactNode; classNa
 /*                    MAIN PAGE                 */
 /* ════════════════════════════════════════════ */
 
+// Team icon & color mapping
+const TEAM_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
+  media: { color: "text-red-500", bg: "bg-red-50", label: "Media" },
+  design: { color: "text-orange-500", bg: "bg-orange-50", label: "Design" },
+  content: { color: "text-yellow-500", bg: "bg-yellow-50", label: "Content" },
+  "teaching-assistant": { color: "text-green-500", bg: "bg-green-50", label: "Teaching Assistant" },
+  operation: { color: "text-blue-500", bg: "bg-blue-50", label: "Operation" },
+  partner: { color: "text-purple-500", bg: "bg-purple-50", label: "Partner" },
+  executive: { color: "text-[#C62828]", bg: "bg-red-50", label: "Executive" },
+};
+
+const teamNameToId: Record<string, string> = {
+  Media: "media",
+  Design: "design",
+  Content: "content",
+  "Teaching Assistant": "teaching-assistant",
+  Operation: "operation",
+  Partner: "partner",
+  Executive: "executive",
+};
+
 export default function PartnerPage() {
-  const router = useRouter();
   const pathname = usePathname();
   const locale = pathname.split("/")[1] || "vi";
 
   /* Data states */
   const [org, setOrg] = useState<OrganizationData | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [activities, setActivities] = useState<ActivityType[]>([]);
 
   /* Accordion states */
   const [openSection, setOpenSection] = useState<Record<string, boolean>>({
@@ -141,29 +151,19 @@ export default function PartnerPage() {
     history: true,
     mission: true,
     achievements: true,
-    partners: true,
-    members: true,
-    news: true,
-    activities: true,
   });
 
   /* Load data */
   useEffect(() => {
     setOrg(getOrganization());
     setMembers(getMembers());
-    setPosts(getPosts());
-    setActivities(getActivities());
 
     const unsubOrg = subscribeToOrganization((d) => setOrg(d));
     const unsubMem = subscribeToMembers((m) => setMembers(m));
-    const unsubPost = subscribeToPosts((p) => setPosts(p));
-    const unsubAct = subscribeToActivities((a) => setActivities(a));
 
     return () => {
       unsubOrg();
       unsubMem();
-      unsubPost();
-      unsubAct();
     };
   }, []);
 
@@ -172,13 +172,31 @@ export default function PartnerPage() {
   const toggle = (key: string) =>
     setOpenSection((prev) => ({ ...prev, [key]: !prev[key] }));
 
+  /* ── Org Chart Data ── */
+  const founder = members.find((m) => m.role === "Founder");
+  const coFounders = members.filter((m) => m.role === "Co-Founder");
+  const teamMembers = members.filter((m) => m.role !== "Founder" && m.role !== "Co-Founder");
+
+  const membersByTeam: Record<string, Member[]> = {};
+  teamMembers.forEach((member) => {
+    const teamId = teamNameToId[member.team] || "other";
+    if (!membersByTeam[teamId]) membersByTeam[teamId] = [];
+    membersByTeam[teamId].push(member);
+  });
+
+  const teams = Object.entries(membersByTeam)
+    .filter(([id]) => id !== "other")
+    .map(([id, teamMembers]) => ({
+      id,
+      config: TEAM_CONFIG[id] || { color: "text-gray-500", bg: "bg-gray-50", label: id },
+      members: teamMembers,
+    }));
+
   /* ─────────────── Navbar ─────────────── */
   const navLinks = [
     { label: "Tổng quan", href: "#overview" },
     { label: "Câu chuyện", href: "#story" },
     { label: "Thành viên", href: "#members" },
-    { label: "Tin tức", href: "#news" },
-    { label: "Hoạt động", href: "#activities" },
   ];
 
   return (
@@ -209,53 +227,98 @@ export default function PartnerPage() {
             ))}
           </nav>
 
-          {/* CTA */}
-          <Link
-            href={`/${locale}/login`}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C62828] text-white text-sm font-medium hover:bg-[#A02020] transition-colors shadow-sm"
-          >
-            <LogIn className="w-4 h-4" />
-            <span className="hidden sm:inline">Đăng nhập</span>
-          </Link>
+          {/* Empty right side - no login button */}
+          <div className="w-8" />
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-12">
         {/* ═══════════ OVERVIEW (Hero) ═══════════ */}
-        <section id="overview" className="text-center py-8">
+        <section id="overview">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
           >
-            <div className="w-20 h-20 rounded-2xl bg-[#C62828] mx-auto mb-4 flex items-center justify-center shadow-xl shadow-[#C62828]/20">
-              <Building2 className="w-10 h-10 text-white" />
-            </div>
-            <h1
-              className="text-3xl sm:text-4xl font-bold text-[#2D2D2D] mb-2"
-              style={{ fontFamily: "var(--font-poppins)" }}
+            {/* Banner - Facebook ratio 851:315 */}
+            <div
+              className="relative w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50"
+              style={{ aspectRatio: "851 / 315" }}
             >
-              {org.name}
-            </h1>
-            <p className="text-lg text-[#C62828] font-medium mb-6">
-              {org.tagline}
-            </p>
-
-            {/* Quick info chips */}
-            <div className="flex flex-wrap justify-center gap-3">
-              {[
-                { icon: MapPin, text: org.location },
-                { icon: Mail, text: org.email },
-                { icon: Globe, text: org.website },
-              ].map((item) => (
-                <div
-                  key={item.text}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-100 shadow-sm text-sm text-gray-600"
-                >
-                  <item.icon className="w-4 h-4 text-[#C62828]" />
-                  {item.text}
+              {org.bannerUrl ? (
+                <img
+                  src={org.bannerUrl}
+                  alt="Banner"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: org.bannerPosition || "center" }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Building2 className="w-16 h-16 text-[#C62828]/20" />
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* Avatar + Info */}
+            <div className="px-6 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 relative z-10">
+                {/* Avatar */}
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-white shrink-0">
+                  {org.avatarUrl ? (
+                    <img src={org.avatarUrl} alt={org.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-[#C62828] flex items-center justify-center text-white font-bold text-2xl">
+                      {org.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Name + Tagline */}
+                <div className="flex-1 pb-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-[#2D2D2D]">
+                    {org.name}
+                  </h1>
+                  <p className="text-[#C62828] font-medium">
+                    {org.tagline}
+                  </p>
+                </div>
+              </div>
+
+              {/* Social Links Row */}
+              {org.socialLinks.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {org.socialLinks.map((link) => (
+                    <a
+                      key={link.platform}
+                      href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100 hover:border-[#C62828] hover:text-[#C62828] transition-colors text-sm text-gray-600"
+                    >
+                      {SOCIAL_ICONS[link.platform] || <Globe className="w-4 h-4" />}
+                      <span className="hidden sm:inline">{link.platform}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* Quick info chips */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                {[
+                  { icon: MapPin, text: org.location },
+                  { icon: Mail, text: org.email },
+                  { icon: Globe, text: org.website },
+                ].map((item) => (
+                  <div
+                    key={item.text}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-100 text-sm text-gray-600"
+                  >
+                    <item.icon className="w-4 h-4 text-[#C62828]" />
+                    {item.text}
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         </section>
@@ -265,7 +328,7 @@ export default function PartnerPage() {
           {[
             { label: "Thành viên", value: `${org.stats.members}+`, icon: Users },
             { label: "Đội nhóm", value: org.stats.teams, icon: Users },
-            { label: "Hoạt động", value: `${org.stats.activities}+`, icon: Activity },
+            { label: "Hoạt động", value: `${org.stats.activities}+`, icon: CalendarDays },
             { label: "Năm hoạt động", value: `${org.stats.yearsActive}+`, icon: CalendarDays },
           ].map((stat) => (
             <Card key={stat.label}>
@@ -392,139 +455,132 @@ export default function PartnerPage() {
           </Card>
         </Section>
 
-        {/* ═══════════ SOCIAL LINKS ═══════════ */}
-        {org.socialLinks.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-3">
-            {org.socialLinks.map((link) => (
-              <a
-                key={link.platform}
-                href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-[#C62828] hover:text-[#C62828] transition-colors text-sm text-gray-600 shadow-sm"
-              >
-                {SOCIAL_ICONS[link.platform] || <Globe className="w-5 h-5" />}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* ═══════════ MEMBERS (Org Chart simplified) ═══════════ */}
+        {/* ═══════════ MEMBERS (Org Chart Tree) ═══════════ */}
         <Section id="members" title="Thành viên chủ chốt" icon={Users}>
-          <Card>
-            <div className="p-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {members.slice(0, 9).map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 border border-gray-100"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center shrink-0">
-                      <span className="text-[#C62828] font-bold text-sm">
-                        {member.fullName.charAt(0)}
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-[#2D2D2D] truncate">{member.fullName}</div>
-                      <div className="text-xs text-[#C62828]">{member.role}</div>
-                      <div className="text-xs text-gray-500">{member.team}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-        </Section>
-
-        {/* ═══════════ NEWS ═══════════ */}
-        <Section id="news" title="Tin tức" icon={Newspaper}>
-          <div className="space-y-4">
-            {posts
-              .filter((p) => p.visibility === "public")
-              .slice(0, 5)
-              .map((post) => (
-                <Card key={post.id}>
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-8 h-8 rounded-full bg-[#C62828]/10 flex items-center justify-center">
-                        <span className="text-[#C62828] text-xs font-bold">
-                          {post.author.name.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-[#2D2D2D]">{post.author.name}</div>
-                        <div className="text-xs text-gray-400">
-                          {new Date(post.createdAt).toLocaleDateString("vi-VN")}
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="font-semibold text-[#2D2D2D] mb-2">{post.title}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-3">{post.content}</p>
-                    {post.images.length > 0 && (
-                      <div className="mt-3 rounded-xl overflow-hidden">
-                        <img
-                          src={post.images[0]}
-                          alt={post.title}
-                          className="w-full h-48 object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                      <span>{post.likes} thích</span>
-                      <span>{post.comments.length} bình luận</span>
-                      <span>{post.views} lượt xem</span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            {posts.filter((p) => p.visibility === "public").length === 0 && (
-              <div className="text-center py-8 text-gray-400">Chưa có tin tức công khai</div>
-            )}
-          </div>
-        </Section>
-
-        {/* ═══════════ ACTIVITIES ═══════════ */}
-        <Section id="activities" title="Hoạt động" icon={Activity}>
-          <div className="space-y-4">
-            {activities.slice(0, 6).map((activity) => (
-              <Card key={activity.id}>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-[#2D2D2D] mb-1">{activity.name}</h3>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <CalendarDays className="w-3.5 h-3.5" />
-                          {activity.date}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Activity className="w-3.5 h-3.5" />
-                          {activity.topic}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            activity.status === "upcoming"
-                              ? "bg-green-50 text-green-600"
-                              : activity.status === "ongoing"
-                              ? "bg-blue-50 text-blue-600"
-                              : "bg-gray-100 text-gray-500"
-                          }`}
-                        >
-                          {activity.status === "upcoming"
-                            ? "Sắp diễn ra"
-                            : activity.status === "ongoing"
-                            ? "Đang diễn ra"
-                            : "Đã kết thúc"}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 line-clamp-2">{activity.description}</p>
-                    </div>
+          <div className="space-y-8">
+            {/* Leadership Section */}
+            {(founder || coFounders.length > 0) && (
+              <div>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
+                    LEADERSHIP
                   </div>
                 </div>
-              </Card>
-            ))}
-            {activities.length === 0 && (
-              <div className="text-center py-8 text-gray-400">Chưa có hoạt động</div>
+
+                <div className="flex justify-center gap-6 flex-wrap">
+                  {/* Founder */}
+                  {founder && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="bg-white rounded-2xl border-2 border-[#C62828] shadow-lg p-5 w-56 text-center"
+                    >
+                      <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
+                        {founder.avatarUrl ? (
+                          <img src={founder.avatarUrl} alt={founder.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-[#C62828]/10 flex items-center justify-center text-[#C62828] font-bold text-xl">
+                            {founder.fullName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-black text-sm">{founder.fullName}</h3>
+                      <span className="text-xs text-[#C62828] font-medium mt-0.5 inline-block">{founder.role}</span>
+                      <p className="text-xs text-gray-400 mt-1">{founder.team}</p>
+                    </motion.div>
+                  )}
+
+                  {/* Co-Founders */}
+                  {coFounders.map((cf, idx) => (
+                    <motion.div
+                      key={cf.id}
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.1 * (idx + 1) }}
+                      className="bg-white rounded-2xl border-2 border-amber-400 shadow-lg p-5 w-56 text-center"
+                    >
+                      <div className="w-16 h-16 rounded-full border-2 border-white shadow-md overflow-hidden bg-gray-100 mx-auto mb-3">
+                        {cf.avatarUrl ? (
+                          <img src={cf.avatarUrl} alt={cf.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl">
+                            {cf.fullName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="font-bold text-black text-sm">{cf.fullName}</h3>
+                      <span className="text-xs text-amber-600 font-medium mt-0.5 inline-block">{cf.role}</span>
+                      <p className="text-xs text-gray-400 mt-1">{cf.team}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Connector */}
+            {(founder || coFounders.length > 0) && teams.length > 0 && (
+              <div className="flex justify-center">
+                <div className="w-0.5 h-8 bg-gray-300" />
+              </div>
+            )}
+
+            {/* Teams Section */}
+            {teams.length > 0 && (
+              <div>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="px-4 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider shadow-sm">
+                    TEAMS
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {teams.map((team, idx) => (
+                    <motion.div
+                      key={team.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+                    >
+                      {/* Team header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`p-1.5 rounded-lg ${team.config.bg}`}>
+                          <Users className={`w-4 h-4 ${team.config.color}`} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-700">{team.config.label}</div>
+                          <div className="text-xs text-gray-400">{team.members.length} thành viên</div>
+                        </div>
+                      </div>
+
+                      {/* Members list */}
+                      <div className="space-y-2">
+                        {team.members.slice(0, 4).map((member) => (
+                          <div key={member.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50">
+                            <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                              {member.avatarUrl ? (
+                                <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-xs font-bold text-gray-400">{member.fullName.charAt(0)}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-medium text-gray-700 truncate">{member.fullName}</div>
+                              <div className="text-[10px] text-[#C62828]">{member.role}</div>
+                            </div>
+                          </div>
+                        ))}
+                        {team.members.length > 4 && (
+                          <div className="text-xs text-gray-400 text-center py-1">
+                            +{team.members.length - 4} thành viên khác
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </Section>
