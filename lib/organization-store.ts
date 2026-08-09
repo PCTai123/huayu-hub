@@ -1,10 +1,12 @@
 // lib/organization-store.ts
-// Organization data management with localStorage + Supabase Storage fallback
+// Organization data management — auto-syncs with Supabase DB when available,
+// falls back to localStorage when offline.
 
 import {
   uploadImageToStorage,
   uploadImagesToStorage,
 } from "@/lib/image-upload";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export interface Partner {
   id: string;
@@ -246,6 +248,15 @@ function notify() {
 export function getOrganization(): OrganizationData {
   const saved = loadFromStorage();
   if (saved) orgData = saved;
+  // Try to sync from Supabase in background (fire-and-forget)
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    syncFromSupabase().then((synced) => {
+      if (synced) {
+        orgData = synced;
+        notify();
+      }
+    });
+  }
   return { ...orgData };
 }
 
@@ -254,6 +265,10 @@ export function updateOrganization(updates: Partial<OrganizationData>): boolean 
   const success = saveToStorage(orgData);
   if (success) {
     notify();
+  }
+  // Fire-and-forget sync to Supabase
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    syncToSupabase(updates).catch(() => {});
   }
   return success;
 }
@@ -370,6 +385,152 @@ export function setCertificateImages(images: CertificateImage[]): boolean {
   const success = saveToStorage(orgData);
   if (success) notify();
   return success;
+}
+
+/* ════════════════════════════════════════════ */
+/*         SUPABASE DATABASE SYNC               */
+/* ════════════════════════════════════════════ */
+
+let supabaseCache: OrganizationData | null = null;
+let isSyncing = false;
+
+function dbToOrg(data: any): OrganizationData {
+  return {
+    id: data.id || DEFAULT_DATA.id,
+    name: data.name || DEFAULT_DATA.name,
+    tagline: data.tagline || DEFAULT_DATA.tagline,
+    location: data.location || DEFAULT_DATA.location,
+    email: data.email || DEFAULT_DATA.email,
+    website: data.website || DEFAULT_DATA.website,
+    avatarUrl: data.avatar_url || "",
+    bannerUrl: data.banner_url || "",
+    bannerPosition: data.banner_position || DEFAULT_DATA.bannerPosition,
+    story: data.story || "",
+    history: data.history || "",
+    mission: data.mission || "",
+    achievements: Array.isArray(data.achievements) ? data.achievements : [],
+    partners: Array.isArray(data.partners) ? data.partners : [],
+    socialLinks: Array.isArray(data.social_links) ? data.social_links : [],
+    stats: {
+      members: data.stats?.members ?? DEFAULT_DATA.stats.members,
+      teams: data.stats?.teams ?? DEFAULT_DATA.stats.teams,
+      activities: data.stats?.activities ?? DEFAULT_DATA.stats.activities,
+      yearsActive: data.stats?.years_active ?? DEFAULT_DATA.stats.yearsActive,
+    },
+    feedbackImages: Array.isArray(data.feedback_images) ? data.feedback_images : [],
+    certificateImages: Array.isArray(data.certificate_images) ? data.certificate_images : [],
+    backgroundUrl: data.background_url || "",
+    adBannerUrl: data.ad_banner_url || "",
+    adBannerPosition: data.ad_banner_position || DEFAULT_DATA.adBannerPosition,
+    sectionVisibility: {
+      overview: data.section_visibility?.overview ?? true,
+      story: data.section_visibility?.story ?? true,
+      members: data.section_visibility?.members ?? true,
+      partners: data.section_visibility?.partners ?? true,
+      feedback: data.section_visibility?.feedback ?? true,
+      certificates: data.section_visibility?.certificates ?? true,
+      adBanner: data.section_visibility?.ad_banner ?? true,
+    },
+  };
+}
+
+function orgToDb(data: Partial<OrganizationData>): any {
+  const db: any = {};
+  if (data.name !== undefined) db.name = data.name;
+  if (data.tagline !== undefined) db.tagline = data.tagline;
+  if (data.location !== undefined) db.location = data.location;
+  if (data.email !== undefined) db.email = data.email;
+  if (data.website !== undefined) db.website = data.website;
+  if (data.avatarUrl !== undefined) db.avatar_url = data.avatarUrl;
+  if (data.bannerUrl !== undefined) db.banner_url = data.bannerUrl;
+  if (data.bannerPosition !== undefined) db.banner_position = data.bannerPosition;
+  if (data.story !== undefined) db.story = data.story;
+  if (data.history !== undefined) db.history = data.history;
+  if (data.mission !== undefined) db.mission = data.mission;
+  if (data.achievements !== undefined) db.achievements = data.achievements;
+  if (data.partners !== undefined) db.partners = data.partners;
+  if (data.socialLinks !== undefined) db.social_links = data.socialLinks;
+  if (data.stats !== undefined) {
+    db.stats = {
+      members: data.stats.members,
+      teams: data.stats.teams,
+      activities: data.stats.activities,
+      years_active: data.stats.yearsActive,
+    };
+  }
+  if (data.feedbackImages !== undefined) db.feedback_images = data.feedbackImages;
+  if (data.certificateImages !== undefined) db.certificate_images = data.certificateImages;
+  if (data.backgroundUrl !== undefined) db.background_url = data.backgroundUrl;
+  if (data.adBannerUrl !== undefined) db.ad_banner_url = data.adBannerUrl;
+  if (data.adBannerPosition !== undefined) db.ad_banner_position = data.adBannerPosition;
+  if (data.sectionVisibility !== undefined) {
+    db.section_visibility = {
+      overview: data.sectionVisibility.overview,
+      story: data.sectionVisibility.story,
+      members: data.sectionVisibility.members,
+      partners: data.sectionVisibility.partners,
+      feedback: data.sectionVisibility.feedback,
+      certificates: data.sectionVisibility.certificates,
+      ad_banner: data.sectionVisibility.adBanner,
+    };
+  }
+  return db;
+}
+
+async function syncFromSupabase(): Promise<OrganizationData | null> {
+  if (!isSupabaseConfigured || typeof window === "undefined") return null;
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("*")
+      .eq("id", "huayu-hub")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Row not found — create default
+        await supabase.from("organizations").insert([{ id: "huayu-hub", name: "Huayu Hub" }]);
+        return DEFAULT_DATA;
+      }
+      console.warn("Supabase sync failed:", error.message);
+      return null;
+    }
+
+    if (data) {
+      const synced = dbToOrg(data);
+      // Save to localStorage as cache
+      orgData = synced;
+      saveToStorage(orgData);
+      return synced;
+    }
+  } catch (err) {
+    console.warn("Supabase sync error:", err);
+  }
+  return null;
+}
+
+async function syncToSupabase(updates: Partial<OrganizationData>): Promise<boolean> {
+  if (!isSupabaseConfigured || typeof window === "undefined") return false;
+  try {
+    const supabase = createClient();
+    const dbData = orgToDb(updates);
+    if (Object.keys(dbData).length === 0) return true;
+
+    const { error } = await supabase
+      .from("organizations")
+      .update(dbData)
+      .eq("id", "huayu-hub");
+
+    if (error) {
+      console.warn("Supabase save failed:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Supabase save error:", err);
+    return false;
+  }
 }
 
 /* ════════════════════════════════════════════ */
