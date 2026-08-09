@@ -369,7 +369,7 @@ export default function OrganizationPage() {
           <p className="text-sm text-gray-500 mb-4">
             {t("partnersSubtitle") || "Cộng đồng hành – Cùng phát triển"}
           </p>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {org.partners.map((partner) => (
               <a
                 key={partner.id}
@@ -660,7 +660,7 @@ function EditOrgDialog({
         <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
           {activeTab === "basic" && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Logo
@@ -759,7 +759,7 @@ function EditOrgDialog({
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-black focus:border-[#C62828] outline-none"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Địa điểm
@@ -794,7 +794,7 @@ function EditOrgDialog({
                   className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-black focus:border-[#C62828] outline-none"
                 />
               </div>
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Thành viên
@@ -1013,9 +1013,9 @@ function EditOrgDialog({
               {form.socialLinks.map((link, index) => (
                 <div
                   key={link.platform}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-200"
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border border-gray-200"
                 >
-                  <span className="text-sm font-medium text-gray-700 w-24">
+                  <span className="text-sm font-medium text-gray-700 sm:w-24 shrink-0">
                     {link.platform}
                   </span>
                   <input

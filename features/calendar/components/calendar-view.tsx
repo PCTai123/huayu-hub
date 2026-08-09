@@ -167,7 +167,7 @@ export function CalendarView({ events = [], onEventClick }: CalendarViewProps) {
             <ChevronLeft className="w-5 h-5" strokeWidth={1.5} />
           </Button>
 
-          <div className="text-center min-w-[200px]">
+          <div className="text-center min-w-0 sm:min-w-[200px]">
             <h2 className="text-xl font-bold text-gray-900">
               {currentDate.toLocaleString("vi-VN", {
                 month: "long",

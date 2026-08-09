@@ -11,7 +11,8 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { isAuthenticated, isLoading } = useAuthContext();
   const router = useRouter();
   const pathname = usePathname();
@@ -34,7 +35,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   const toggleSidebar = () => {
-    setSidebarOpen((prev) => !prev);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setMobileSidebarOpen((prev) => !prev);
+    } else {
+      setSidebarOpen((prev) => !prev);
+    }
+  };
+
+  const closeMobileSidebar = () => {
+    setMobileSidebarOpen(false);
   };
 
   const sidebarWidth = sidebarOpen ? 260 : 64;
@@ -77,21 +86,35 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F6F1E8' }}>
-      {/* Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
+      {/* Sidebar - desktop collapse/expand */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={toggleSidebar}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={closeMobileSidebar}
+      />
 
       {/* Topbar */}
       <Topbar onMenuToggle={toggleSidebar} />
 
       {/* Main Content */}
       <main
-        className="transition-all duration-300 ease-in-out min-h-screen pt-20 pb-6 px-6"
+        className="transition-all duration-300 ease-in-out min-h-screen pt-20 pb-6 px-3 md:px-6"
         style={{
-          marginLeft: `${sidebarWidth}px`,
+          marginLeft: '0px',
         }}
       >
         <div className="max-w-7xl mx-auto">{children}</div>
       </main>
+
+      {/* Desktop: push main content right by sidebar width */}
+      <style jsx global>{`
+        @media (min-width: 768px) {
+          main {
+            margin-left: ${sidebarWidth}px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

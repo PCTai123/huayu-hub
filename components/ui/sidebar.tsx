@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,43 +35,58 @@ const menuItems = [
 interface SidebarProps {
   isOpen: boolean;
   onToggle: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+export default function Sidebar({ isOpen, onToggle, mobileOpen = false, onCloseMobile }: SidebarProps) {
   const pathname = usePathname();
   const t = useTranslations('sidebar');
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
+    const checkMobile = () => {
+      setIsMobile(typeof window !== 'undefined' && window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (mobileOpen && onCloseMobile) {
+      onCloseMobile();
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggle = useCallback(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      setIsMobileOpen((prev) => !prev);
+      if (onCloseMobile) {
+        onCloseMobile();
+      }
     } else {
       onToggle();
     }
-  }, [onToggle]);
+  }, [onToggle, onCloseMobile]);
 
-  const sidebarWidth = isOpen ? 260 : 64;
-
-  const animatedWidth = isMounted
-    ? (typeof window !== 'undefined' && window.innerWidth >= 768 ? sidebarWidth : isMobileOpen ? 260 : 0)
-    : sidebarWidth;
+  const desktopWidth = isOpen ? 260 : 64;
+  const sidebarWidth = isMounted && isMobile ? (mobileOpen ? 260 : 0) : desktopWidth;
+  const showFull = isOpen || mobileOpen;
 
   return (
     <>
       {/* Mobile overlay */}
       <AnimatePresence>
-        {isMobileOpen && (
+        {mobileOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/40 z-40 md:hidden"
-            onClick={() => setIsMobileOpen(false)}
+            onClick={onCloseMobile}
           />
         )}
       </AnimatePresence>
@@ -80,7 +95,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <motion.aside
         initial={false}
         animate={{
-          width: animatedWidth,
+          width: sidebarWidth,
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className="fixed top-0 left-0 h-screen z-50 flex flex-col overflow-hidden"
@@ -89,7 +104,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* Logo */}
         <div className="flex items-center h-16 px-4 border-b border-[#C62828]/10 shrink-0">
           <AnimatePresence mode="wait">
-            {isOpen || isMobileOpen ? (
+            {showFull ? (
               <motion.div
                 key="full-logo"
                 initial={{ opacity: 0, x: -10 }}
@@ -139,7 +154,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(`${item.href}/`));
 
             return (
               <Link key={item.href} href={item.href} className="group block relative">
@@ -167,7 +182,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   />
 
                   <AnimatePresence mode="wait">
-                    {(isOpen || isMobileOpen) && (
+                    {showFull && (
                       <motion.span
                         key={item.label}
                         initial={{ opacity: 0, x: -8 }}
@@ -189,7 +204,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* Bottom section */}
         <div className="shrink-0 p-4 border-t border-[#C62828]/10">
           <AnimatePresence mode="wait">
-            {(isOpen || isMobileOpen) ? (
+            {showFull ? (
               <motion.div
                 key="bottom-full"
                 initial={{ opacity: 0 }}

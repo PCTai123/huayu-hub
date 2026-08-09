@@ -440,7 +440,7 @@ export function OrgChartTree() {
                 </div>
 
                 {/* Team Cards Grid - Compact single row */}
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                   {teams.map((team, index) => {
                     const leader = team.members.find((m) =>
                       ["Trưởng nhóm", "Team Lead", "Leader"].some((r) => m.role.includes(r))

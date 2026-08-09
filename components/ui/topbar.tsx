@@ -230,7 +230,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-2 w-80 rounded-xl overflow-hidden shadow-lg border border-white/30 bg-white"
+                className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-xl overflow-hidden shadow-lg border border-white/30 bg-white"
               >
                 <div className="px-4 py-3 border-b border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-800">{t('notifications')}</h3>
@@ -292,7 +292,7 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden shadow-lg border border-white/30"
+                className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-xl overflow-hidden shadow-lg border border-white/30"
                 style={{
                   backdropFilter: 'blur(12px)',
                   backgroundColor: 'rgba(255, 255, 255, 0.9)',

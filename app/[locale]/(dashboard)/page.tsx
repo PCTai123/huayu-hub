@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import HeroBanner from '@/features/dashboard/components/hero-banner';
 import StatCards from '@/features/dashboard/components/stat-cards';
@@ -33,10 +33,16 @@ const itemVariants = {
 };
 
 export default function DashboardPage() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   return (
     <motion.div
       variants={containerVariants}
-      initial="hidden"
+      initial={isClient ? 'hidden' : 'visible'}
       animate="visible"
       className="space-y-6"
     >

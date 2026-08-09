@@ -186,11 +186,11 @@ export function GlobalSearch({ onSearch }: GlobalSearchProps) {
           setIsOpen(true);
           setTimeout(() => inputRef.current?.focus(), 100);
         }}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-[20px] bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300 min-w-[280px]"
+        className="flex items-center gap-3 px-4 py-2.5 rounded-[20px] bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/15 transition-all duration-300 w-full sm:w-auto sm:min-w-[280px]"
       >
         <Search className="w-4 h-4 text-white/60" strokeWidth={1.5} />
         <span className="text-sm text-white/60">{t("searchPlaceholder")}</span>
-        <div className="ml-auto flex items-center gap-1 text-xs text-white/40">
+        <div className="ml-auto hidden sm:flex items-center gap-1 text-xs text-white/40">
           <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-mono">Ctrl</kbd>
           <span>+</span>
           <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-mono">K</kbd>

@@ -16,6 +16,12 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Huayu Hub - AI x Chinese Learning Community",
   description: "Team Management System for Huayu Hub - AI x Chinese Learning Community",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+  },
   icons: {
     icon: "/favicon.ico",
   },
