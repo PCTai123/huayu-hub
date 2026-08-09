@@ -660,8 +660,8 @@ function EditMode({
         />
       )}
 
-      {/* Ad Banner Editor */}
-      {visibility.adBanner && (
+      {/* Ad Banner Editor - always visible (like Background) so users can upload before toggling */}
+      {true && (
         <AdBannerEditor
           adBannerUrl={adBannerUrl}
           adBannerPosition={adBannerPosition}
