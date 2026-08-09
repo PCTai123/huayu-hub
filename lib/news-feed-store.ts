@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createClient } from "@/lib/supabase";
 
 export interface Author {
   id: string;
@@ -30,173 +31,334 @@ export interface Post {
   visibility: "public" | "team_only";
 }
 
-const STORAGE_KEY = "huayu-hub-news-feed";
-
-const initialPosts: Post[] = [
-  {
-    id: "1",
-    title: "Chao mung den voi Huayu Hub",
-    content:
-      "Day la bai dang dau tien tren bang tin moi cua chung ta. Hy vong moi nguoi se thich khong gian nay de chia se thong tin va ket noi voi nhau!",
-    images: [],
-    author: { id: "admin-1", name: "Admin", avatarUrl: "" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    views: 42,
-    comments: [
-      {
-        id: "c1",
-        author: { id: "u2", name: "Alice Chen" },
-        content: "Rat tuyet! Minh rat vui khi thay bang tin moi.",
-        createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      },
-    ],
-    likes: 5,
-    isLiked: false,
-    visibility: "public",
-  },
-  {
-    id: "2",
-    title: "Lich hop tuan nay",
-    content:
-      "Chung ta se co buoi hop vao thu Sau luc 14:00. Moi nguoi nho sap xep thoi gian nhe!",
-    images: [],
-    author: { id: "admin-1", name: "Admin", avatarUrl: "" },
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    views: 28,
-    comments: [],
-    likes: 3,
-    isLiked: true,
-    visibility: "team_only",
-  },
-];
-
-let postsStore: Post[] = [...initialPosts];
+let postsStore: Post[] = [];
 const listeners = new Set<(posts: Post[]) => void>();
 
 function notify() {
   listeners.forEach((fn) => fn([...postsStore]));
 }
 
-function saveToStorage() {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(postsStore));
-    } catch (e) {
-      console.error("Failed to save news feed to storage:", e);
+/**
+ * Fetch all posts from Supabase (including comments nested)
+ */
+export async function fetchPostsFromSupabase(): Promise<Post[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("posts")
+      .select("*, post_comments(*)")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.warn("fetchPostsFromSupabase failed:", error.message);
+      return postsStore;
     }
+
+    const fetched: Post[] = (data || []).map((row: any) => {
+      const comments: Comment[] = (row.post_comments || [])
+        .filter((c: any) => !c.parent_id) // top-level only for now
+        .map((c: any) => ({
+          id: c.id,
+          author: {
+            id: c.author_id || "",
+            name: c.author_name || "You",
+            avatarUrl: c.author_avatar || "",
+          },
+          content: c.content,
+          createdAt: c.created_at,
+        }));
+
+      return {
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        images: row.images || [],
+        author: {
+          id: row.author_id || "",
+          name: row.author_name || "Admin",
+          avatarUrl: row.author_avatar || "",
+        },
+        createdAt: row.created_at,
+        views: row.views || 0,
+        comments,
+        likes: row.likes || 0,
+        isLiked: false,
+        visibility: (row.visibility as any) || "public",
+      };
+    });
+
+    postsStore = fetched;
+    notify();
+    return fetched;
+  } catch (e) {
+    console.warn("fetchPostsFromSupabase error:", e);
+    return postsStore;
   }
 }
 
-function loadFromStorage(): Post[] | null {
-  if (typeof window !== "undefined") {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
+/**
+ * Insert a new post into Supabase + create notification for all users
+ */
+export async function addPostToSupabase(
+  post: Omit<Post, "id" | "createdAt">
+): Promise<Post | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("posts")
+      .insert({
+        title: post.title,
+        content: post.content,
+        images: post.images || [],
+        author_id: post.author.id,
+        author_name: post.author.name,
+        author_avatar: post.author.avatarUrl,
+        views: 0,
+        likes: 0,
+        visibility: post.visibility || "public",
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.warn("addPostToSupabase failed:", error?.message);
+      return null;
+    }
+
+    const newPost: Post = {
+      id: data.id,
+      title: data.title,
+      content: data.content,
+      images: data.images || [],
+      author: {
+        id: data.author_id || "",
+        name: data.author_name || "Admin",
+        avatarUrl: data.author_avatar || "",
+      },
+      createdAt: data.created_at,
+      views: 0,
+      comments: [],
+      likes: 0,
+      isLiked: false,
+      visibility: (data.visibility as any) || "public",
+    };
+
+    postsStore = [newPost, ...postsStore];
+    notify();
+
+    // Create notification for all users
+    await createNotification({
+      title: `Bai viet moi: ${post.title}`,
+      message: post.content.substring(0, 80) + (post.content.length > 80 ? "..." : ""),
+      type: "post",
+      related_id: data.id,
+      related_type: "post",
+    });
+
+    return newPost;
+  } catch (e) {
+    console.warn("addPostToSupabase error:", e);
+    return null;
+  }
+}
+
+/**
+ * Delete a post from Supabase
+ */
+export async function deletePostFromSupabase(id: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("posts").delete().eq("id", id);
+    if (error) {
+      console.warn("deletePostFromSupabase failed:", error.message);
+      return false;
+    }
+    postsStore = postsStore.filter((p) => p.id !== id);
+    notify();
+    return true;
+  } catch (e) {
+    console.warn("deletePostFromSupabase error:", e);
+    return false;
+  }
+}
+
+/**
+ * Toggle like on a post in Supabase
+ */
+export async function toggleLikeInSupabase(id: string, userId?: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const post = postsStore.find((p) => p.id === id);
+    if (!post) return false;
+
+    const newLikes = post.isLiked ? Math.max(0, post.likes - 1) : post.likes + 1;
+    const { error } = await supabase
+      .from("posts")
+      .update({ likes: newLikes })
+      .eq("id", id);
+
+    if (error) {
+      console.warn("toggleLikeInSupabase failed:", error.message);
+      return false;
+    }
+
+    postsStore = postsStore.map((p) =>
+      p.id === id ? { ...p, isLiked: !p.isLiked, likes: newLikes } : p
+    );
+    notify();
+    return true;
+  } catch (e) {
+    console.warn("toggleLikeInSupabase error:", e);
+    return false;
+  }
+}
+
+/**
+ * Add a comment to a post in Supabase
+ */
+export async function addCommentToSupabase(
+  postId: string,
+  content: string,
+  author?: Author,
+  parentId?: string
+): Promise<Comment | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("post_comments")
+      .insert({
+        post_id: postId,
+        author_id: author?.id || "current-user",
+        author_name: author?.name || "You",
+        author_avatar: author?.avatarUrl || "",
+        content,
+        parent_id: parentId || null,
+      })
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.warn("addCommentToSupabase failed:", error?.message);
+      return null;
+    }
+
+    const newComment: Comment = {
+      id: data.id,
+      author: {
+        id: data.author_id || "",
+        name: data.author_name || "You",
+        avatarUrl: data.author_avatar || "",
+      },
+      content: data.content,
+      createdAt: data.created_at,
+    };
+
+    postsStore = postsStore.map((p) => {
+      if (p.id !== postId) return p;
+      if (parentId) {
+        const addReply = (comments: Comment[]): Comment[] =>
+          comments.map((c) =>
+            c.id === parentId
+              ? { ...c, replies: [...(c.replies || []), newComment] }
+              : { ...c, replies: addReply(c.replies || []) }
+          );
+        return { ...p, comments: addReply(p.comments) };
       }
-    } catch (e) {
-      console.error("Failed to load news feed from storage:", e);
-    }
+      return { ...p, comments: [...p.comments, newComment] };
+    });
+
+    notify();
+    return newComment;
+  } catch (e) {
+    console.warn("addCommentToSupabase error:", e);
+    return null;
   }
-  return null;
 }
 
-// Load from storage on first access
-const stored = loadFromStorage();
-if (stored) {
-  postsStore = stored;
+/**
+ * Create a notification in Supabase (global for all users if user_id is null)
+ */
+export async function createNotification(data: {
+  title: string;
+  message: string;
+  type?: string;
+  related_id?: string;
+  related_type?: string;
+  user_id?: string | null;
+}): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("notifications").insert({
+      user_id: data.user_id || null,
+      title: data.title,
+      message: data.message,
+      type: data.type || "announcement",
+      related_id: data.related_id || null,
+      related_type: data.related_type || null,
+      is_read: false,
+    });
+
+    if (error) {
+      console.warn("createNotification failed:", error.message);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn("createNotification error:", e);
+    return false;
+  }
 }
 
+/**
+ * Hook for React components (auto-fetches from Supabase on mount)
+ */
 export function useNewsFeedStore() {
   const [posts, setPosts] = useState<Post[]>(postsStore);
 
   useEffect(() => {
     listeners.add(setPosts);
+    // Fetch from Supabase on mount
+    fetchPostsFromSupabase();
     return () => {
       listeners.delete(setPosts);
     };
   }, []);
 
-  const addPost = useCallback((post: Post) => {
-    postsStore = [post, ...postsStore];
-    saveToStorage();
-    notify();
+  const addPost = useCallback(async (post: Omit<Post, "id" | "createdAt">) => {
+    await addPostToSupabase(post);
   }, []);
 
-  const deletePost = useCallback((id: string) => {
-    postsStore = postsStore.filter((p) => p.id !== id);
-    saveToStorage();
-    notify();
+  const deletePost = useCallback(async (id: string) => {
+    await deletePostFromSupabase(id);
   }, []);
 
-  const updatePost = useCallback((id: string, updates: Partial<Post>) => {
-    postsStore = postsStore.map((p) => (p.id === id ? { ...p, ...updates } : p));
-    saveToStorage();
-    notify();
-  }, []);
-
-  const toggleLike = useCallback((id: string, userId: string) => {
-    postsStore = postsStore.map((p) => {
-      if (p.id !== id) return p;
-      const isLiked = !p.isLiked;
-      return {
-        ...p,
-        isLiked,
-        likes: isLiked ? p.likes + 1 : p.likes - 1,
-      };
-    });
-    saveToStorage();
-    notify();
+  const toggleLike = useCallback(async (id: string) => {
+    await toggleLikeInSupabase(id);
   }, []);
 
   const addComment = useCallback(
-    (postId: string, content: string, parentId?: string) => {
-      postsStore = postsStore.map((p) => {
-        if (p.id !== postId) return p;
-        const newComment: Comment = {
-          id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          author: { id: userId, name: "You", avatarUrl: "" },
-          content,
-          createdAt: new Date().toISOString(),
-        };
-
-        if (parentId) {
-          const addReply = (comments: Comment[]): Comment[] =>
-            comments.map((c) =>
-              c.id === parentId
-                ? { ...c, replies: [...(c.replies || []), newComment] }
-                : { ...c, replies: addReply(c.replies || []) }
-            );
-          return { ...p, comments: addReply(p.comments) };
-        }
-
-        return { ...p, comments: [...p.comments, newComment] };
-      });
-      saveToStorage();
-      notify();
+    async (postId: string, content: string, parentId?: string) => {
+      await addCommentToSupabase(postId, content, undefined, parentId);
     },
     []
   );
 
-  return { posts, addPost, deletePost, updatePost, toggleLike, addComment };
+  return { posts, addPost, deletePost, toggleLike, addComment };
 }
 
-const userId = "current-user";
-
-// Direct access functions
+// Direct access functions (backward compat)
 export function getPosts() {
   return [...postsStore];
 }
 
 export function addPostToStore(post: Post) {
+  // Deprecated: use addPostToSupabase instead
   postsStore = [post, ...postsStore];
-  saveToStorage();
   notify();
 }
 
 export function deletePostFromStore(id: string) {
   postsStore = postsStore.filter((p) => p.id !== id);
-  saveToStorage();
   notify();
 }
 
@@ -204,13 +366,8 @@ export function toggleLikeInStore(id: string) {
   postsStore = postsStore.map((p) => {
     if (p.id !== id) return p;
     const isLiked = !p.isLiked;
-    return {
-      ...p,
-      isLiked,
-      likes: isLiked ? p.likes + 1 : p.likes - 1,
-    };
+    return { ...p, isLiked, likes: isLiked ? p.likes + 1 : p.likes - 1 };
   });
-  saveToStorage();
   notify();
 }
 

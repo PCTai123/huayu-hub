@@ -2,12 +2,14 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { PenSquare, Calendar, Filter, Trash2, X } from "lucide-react";
+import { PenSquare, Calendar, Filter, X } from "lucide-react";
 import { PostCard } from "@/features/news-feed/components/post-card";
 import { CreatePostDialog } from "@/features/news-feed/components/create-post-dialog";
 import { MiniCalendarSidebar } from "@/features/news-feed/components/mini-calendar-sidebar";
-import { useNewsFeedStore } from "@/lib/news-feed-store";
-import type { Post } from "@/lib/news-feed-store";
+import {
+  useNewsFeedStore,
+  fetchPostsFromSupabase,
+} from "@/lib/news-feed-store";
 
 const CURRENT_USER_ID = "current-user";
 
@@ -26,11 +28,13 @@ export default function NewsFeedPage() {
   const [filterYear, setFilterYear] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Generate year options (current year and previous 2 years)
+  useEffect(() => {
+    fetchPostsFromSupabase();
+  }, []);
+
   const currentYear = new Date().getFullYear();
   const yearOptions = [currentYear, currentYear - 1, currentYear - 2];
 
-  // Filter posts by month/year
   const filteredPosts = posts.filter((post) => {
     const postDate = new Date(post.createdAt);
     if (filterMonth && (postDate.getMonth() + 1).toString() !== filterMonth) {
@@ -44,20 +48,17 @@ export default function NewsFeedPage() {
 
   const handleCreatePost = useCallback(
     async (data: CreatePostInput) => {
-      const newPost: Post = {
-        id: `post-${Date.now()}`,
+      await addPost({
         title: data.title,
         content: data.content,
         images: data.images,
         author: { id: CURRENT_USER_ID, name: "You", avatarUrl: "" },
-        createdAt: new Date().toISOString(),
         views: 0,
         comments: [],
         likes: 0,
         isLiked: false,
         visibility: data.visibility,
-      };
-      addPost(newPost);
+      });
     },
     [addPost]
   );
@@ -155,18 +156,11 @@ export default function NewsFeedPage() {
                 className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-[#C62828] focus:outline-none"
               >
                 <option value="">Tat ca thang</option>
-                <option value="1">Thang 1</option>
-                <option value="2">Thang 2</option>
-                <option value="3">Thang 3</option>
-                <option value="4">Thang 4</option>
-                <option value="5">Thang 5</option>
-                <option value="6">Thang 6</option>
-                <option value="7">Thang 7</option>
-                <option value="8">Thang 8</option>
-                <option value="9">Thang 9</option>
-                <option value="10">Thang 10</option>
-                <option value="11">Thang 11</option>
-                <option value="12">Thang 12</option>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={String(i + 1)}>
+                    Thang {i + 1}
+                  </option>
+                ))}
               </select>
               <select
                 value={filterYear}

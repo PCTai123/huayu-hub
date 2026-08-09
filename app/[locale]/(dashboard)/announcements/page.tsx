@@ -6,26 +6,44 @@ import { useTranslations } from "next-intl";
 import { AnnouncementCard } from "@/features/announcements/components/announcement-card";
 import { CreateAnnouncementDialog } from "@/features/announcements/components/create-announcement-dialog";
 import { Megaphone } from "lucide-react";
-import { getAnnouncements, addAnnouncement, subscribeToAnnouncements, type Announcement } from "@/lib/announcement-store";
+import {
+  getAnnouncements,
+  addAnnouncement,
+  subscribeToAnnouncements,
+  fetchAnnouncementsFromSupabase,
+  type Announcement,
+} from "@/lib/announcement-store";
 
 export default function AnnouncementsPage() {
   const t = useTranslations("announcements");
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
   useEffect(() => {
-    setAnnouncements(getAnnouncements());
-    return subscribeToAnnouncements(() => {
+    // Fetch from Supabase on mount
+    fetchAnnouncementsFromSupabase().then(() => {
       setAnnouncements(getAnnouncements());
     });
+
+    const unsub = subscribeToAnnouncements(() => {
+      setAnnouncements(getAnnouncements());
+    });
+
+    return () => {
+      unsub();
+    };
   }, []);
 
-  const handleCreateAnnouncement = (data: { title: string; content: string }) => {
-    addAnnouncement({
+  const handleCreateAnnouncement = async (data: {
+    title: string;
+    content: string;
+  }) => {
+    await addAnnouncement({
       title: data.title,
       content: data.content,
       authorName: "Admin User",
       authorAvatar: undefined,
     });
+    setAnnouncements(getAnnouncements());
   };
 
   return (

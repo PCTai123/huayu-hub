@@ -137,8 +137,8 @@ export function OrgChartTree() {
     setExpandedTeams((prev) => new Set([...prev, teamId]));
   };
 
-  const handleDeleteMember = (memberId: string) => {
-    deleteMember(memberId);
+  const handleDeleteMember = async (memberId: string) => {
+    await deleteMember(memberId);
   };
 
   useEffect(() => {

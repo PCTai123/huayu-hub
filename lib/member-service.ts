@@ -196,10 +196,40 @@ export function addMember(member: Member) {
   notify();
 }
 
-export function deleteMember(id: string) {
+export async function deleteMember(id: string): Promise<boolean> {
+  // Delete from local store first
   membersStore = membersStore.filter((m) => m.id !== id);
   saveToStorage();
   notify();
+
+  // Delete from Supabase profiles
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("profiles").delete().eq("id", id);
+    if (error) console.warn("deleteMember profiles failed:", error.message);
+  } catch (e) {
+    console.warn("deleteMember profiles error:", e);
+  }
+
+  // Delete from birthday_events
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("birthday_events").delete().eq("user_id", id);
+    if (error) console.warn("deleteMember birthday_events failed:", error.message);
+  } catch (e) {
+    console.warn("deleteMember birthday_events error:", e);
+  }
+
+  // Delete related tasks
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("tasks").delete().eq("assigned_to", id);
+    if (error) console.warn("deleteMember tasks failed:", error.message);
+  } catch (e) {
+    console.warn("deleteMember tasks error:", e);
+  }
+
+  return true;
 }
 
 export function subscribeToMembers(fn: (members: Member[]) => void) {

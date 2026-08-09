@@ -7,12 +7,8 @@ import {
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import {
-  getNotifications,
-  subscribeToNotifications,
-  type NotificationItem
-} from '@/lib/announcement-store';
-import { checkAndCreateBirthdayNotifications, getSupabaseNotifications } from '@/lib/birthday-service';
+import { fetchNotificationsFromSupabase, subscribeToNotifications } from '@/lib/announcement-store';
+import { checkAndCreateBirthdayNotifications } from '@/lib/birthday-service';
 
 const iconMap: Record<string, React.ElementType> = {
   member: UserPlus,
@@ -35,11 +31,11 @@ const colorMap: Record<string, string> = {
 };
 
 /* Detect notification type from title/message content */
-function detectType(notif: NotificationItem): string {
-  const text = (notif.title + ' ' + notif.message).toLowerCase();
+function detectType(title: string, message: string): string {
+  const text = (title + ' ' + message).toLowerCase();
   if (text.includes('sinh nhat') || text.includes('birthday')) return 'birthday';
   if (text.includes('task') || text.includes('nhiem vu')) return 'task';
-  if (text.includes('post') || text.includes('bai viet')) return 'post';
+  if (text.includes('bai viet') || text.includes('post')) return 'post';
   if (text.includes('event') || text.includes('hoat dong')) return 'event';
   if (text.includes('member') || text.includes('thanh vien')) return 'member';
   return 'announcement';
@@ -61,56 +57,31 @@ export default function RecentNotifications() {
   const [notifications, setNotifications] = useState<DisplayNotification[]>([]);
 
   useEffect(() => {
-    const fetchAndMerge = async () => {
-      /* Get local notifications (same source as Topbar) */
-      const localNotifs = getNotifications();
-
-      /* Also check and create birthday notifications */
+    const load = async () => {
       try {
         await checkAndCreateBirthdayNotifications();
       } catch {}
 
-      /* Get Supabase notifications (birthday reminders, task notifications) */
-      let supabaseNotifs: any[] = [];
-      try {
-        supabaseNotifs = await getSupabaseNotifications();
-      } catch {}
-
-      /* Merge: Supabase first (if not duplicate), then local */
-      const localIds = new Set(localNotifs.map((n) => n.id));
-      const merged: DisplayNotification[] = [
-        ...supabaseNotifs
-          .filter((n: any) => !localIds.has(n.id))
-          .map((n: any) => ({
-            id: n.id,
-            type: detectType(n),
-            title: n.title,
-            time: n.time,
-            unread: n.unread,
-            route: '/calendar',
-          })),
-        ...localNotifs.map((n) => ({
+      const notifs = await fetchNotificationsFromSupabase();
+      const mapped: DisplayNotification[] = notifs.slice(0, 8).map((n) => {
+        const type = detectType(n.title, n.message);
+        return {
           id: n.id,
-          type: detectType(n),
+          type,
           title: n.title,
           time: n.time,
           unread: n.unread,
-          route: '/announcements',
-        })),
-      ];
-
-      setNotifications(merged.slice(0, 8));
+          route: type === 'post' ? '/news' : type === 'birthday' ? '/calendar' : '/announcements',
+        };
+      });
+      setNotifications(mapped);
     };
 
-    fetchAndMerge();
+    load();
 
-    /* Subscribe to notification changes (syncs with Topbar) */
-    const unsub = subscribeToNotifications(() => {
-      fetchAndMerge();
-    });
-
-    /* Re-check every 5 minutes for new birthday/task notifications */
-    const interval = setInterval(fetchAndMerge, 5 * 60 * 1000);
+    /* Subscribe + poll every 5 min */
+    const unsub = subscribeToNotifications(() => load());
+    const interval = setInterval(load, 5 * 60 * 1000);
 
     return () => {
       unsub();
@@ -121,10 +92,7 @@ export default function RecentNotifications() {
   return (
     <div className="rounded-[20px] bg-white p-5 shadow-sm border border-gray-100/50">
       <div className="flex items-center justify-between mb-4">
-        <h3
-          className="text-lg font-semibold text-gray-900"
-          style={{ fontFamily: 'Poppins, sans-serif' }}
-        >
+        <h3 className="text-lg font-semibold text-gray-900" style={{ fontFamily: 'Poppins, sans-serif' }}>
           {t('title')}
         </h3>
         <button
@@ -155,10 +123,7 @@ export default function RecentNotifications() {
                   notification.unread ? 'bg-[#C62828]/5' : 'hover:bg-gray-50'
                 }`}
               >
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${color}12` }}
-                >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${color}12` }}>
                   <Icon size={18} strokeWidth={1.5} style={{ color }} />
                 </div>
 

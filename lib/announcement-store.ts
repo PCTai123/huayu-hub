@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase";
+
 export interface Announcement {
   id: string;
   title: string;
@@ -19,69 +21,29 @@ export interface NotificationItem {
   createdAt: number;
 }
 
-const ANNOUNCEMENTS_KEY = "huayu-hub-announcements";
-const NOTIFICATIONS_KEY = "huayu-hub-notifications";
-const NOTIFICATIONS_READ_KEY = "huayu-hub-notifications-read";
-
-let announcements: Announcement[] = [];
-let notifications: NotificationItem[] = [];
+/* ── In-memory cache (same pattern as member-service) ── */
+let announcementsCache: Announcement[] = [];
+let notificationsCache: NotificationItem[] = [];
 let lastReadTime = 0;
 let listeners = new Set<() => void>();
 let notificationListeners = new Set<() => void>();
 
-function loadAnnouncements() {
-  if (typeof window === "undefined") return;
-  try {
-    const saved = localStorage.getItem(ANNOUNCEMENTS_KEY);
-    if (saved) {
-      announcements = JSON.parse(saved);
-    }
-  } catch (e) {
-    console.error("Failed to load announcements:", e);
-  }
-}
+/* ── localStorage fallback keys ── */
+const READ_KEY = "huayu-hub-notifications-read";
 
-function saveAnnouncements() {
+function loadReadTime() {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
-  } catch (e) {
-    console.error("Failed to save announcements:", e);
-  }
-}
-
-function loadNotifications() {
-  if (typeof window === "undefined") return;
-  try {
-    const saved = localStorage.getItem(NOTIFICATIONS_KEY);
-    if (saved) {
-      notifications = JSON.parse(saved);
-    }
-    const read = localStorage.getItem(NOTIFICATIONS_READ_KEY);
-    if (read) {
-      lastReadTime = parseInt(read, 10);
-    }
-  } catch (e) {
-    console.error("Failed to load notifications:", e);
-  }
-}
-
-function saveNotifications() {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
-  } catch (e) {
-    console.error("Failed to save notifications:", e);
-  }
+    const saved = localStorage.getItem(READ_KEY);
+    if (saved) lastReadTime = parseInt(saved, 10);
+  } catch {}
 }
 
 function saveReadTime() {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(NOTIFICATIONS_READ_KEY, String(lastReadTime));
-  } catch (e) {
-    console.error("Failed to save read time:", e);
-  }
+    localStorage.setItem(READ_KEY, String(lastReadTime));
+  } catch {}
 }
 
 function notify() {
@@ -92,53 +54,193 @@ function notifyNotificationListeners() {
   notificationListeners.forEach((fn) => fn());
 }
 
+/* ── Supabase helpers ── */
+
+/**
+ * Fetch announcements from Supabase
+ */
+export async function fetchAnnouncementsFromSupabase(): Promise<Announcement[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.warn("fetchAnnouncements failed:", error.message);
+      return announcementsCache;
+    }
+
+    announcementsCache = (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      date: row.date || row.created_at?.split("T")[0] || "",
+      author: {
+        name: row.author_name || "Admin",
+        avatar: row.author_avatar || undefined,
+      },
+      createdAt: new Date(row.created_at).getTime(),
+    }));
+
+    notify();
+    return announcementsCache;
+  } catch (e) {
+    console.warn("fetchAnnouncements error:", e);
+    return announcementsCache;
+  }
+}
+
+/**
+ * Fetch notifications from Supabase
+ */
+export async function fetchNotificationsFromSupabase(): Promise<NotificationItem[]> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.warn("fetchNotifications failed:", error.message);
+      return notificationsCache;
+    }
+
+    notificationsCache = (data || []).map((row: any) => ({
+      id: row.id,
+      title: row.title,
+      message: row.message || "",
+      time: formatRelativeTime(row.created_at),
+      unread: !row.is_read,
+      createdAt: new Date(row.created_at).getTime(),
+    }));
+
+    notifyNotificationListeners();
+    return notificationsCache;
+  } catch (e) {
+    console.warn("fetchNotifications error:", e);
+    return notificationsCache;
+  }
+}
+
+/* ── Public API ── */
+
 export function getAnnouncements(): Announcement[] {
-  loadAnnouncements();
-  return [...announcements];
+  return [...announcementsCache];
 }
 
 export function getNotifications(): NotificationItem[] {
-  loadNotifications();
-  return [...notifications];
+  loadReadTime();
+  return [...notificationsCache];
 }
 
 export function getUnreadCount(): number {
-  loadNotifications();
-  return notifications.filter((n) => n.unread && n.createdAt > lastReadTime).length;
+  loadReadTime();
+  return notificationsCache.filter(
+    (n) => n.unread && n.createdAt > lastReadTime
+  ).length;
 }
 
-export function addAnnouncement(data: { title: string; content: string; authorName: string; authorAvatar?: string }) {
-  const now = new Date();
-  const dateStr = now.toISOString().split("T")[0];
-  const newAnnouncement: Announcement = {
-    id: `ann-${Date.now()}`,
-    title: data.title,
-    content: data.content,
-    date: dateStr,
-    author: {
-      name: data.authorName,
-      avatar: data.authorAvatar,
-    },
-    createdAt: Date.now(),
-  };
-  loadAnnouncements();
-  announcements.unshift(newAnnouncement);
-  saveAnnouncements();
-  notify();
+/**
+ * Add an announcement to Supabase + create a notification
+ */
+export async function addAnnouncement(data: {
+  title: string;
+  content: string;
+  authorName: string;
+  authorAvatar?: string;
+}): Promise<Announcement | null> {
+  try {
+    const supabase = createClient();
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0];
 
-  // Also create notification
-  const newNotif: NotificationItem = {
-    id: `notif-${Date.now()}`,
-    title: data.title,
-    message: data.content.substring(0, 60) + (data.content.length > 60 ? "..." : ""),
-    time: "Vừa xong",
-    unread: true,
-    createdAt: Date.now(),
-  };
-  loadNotifications();
-  notifications.unshift(newNotif);
-  saveNotifications();
-  notifyNotificationListeners();
+    const { data: row, error } = await supabase
+      .from("announcements")
+      .insert({
+        title: data.title,
+        content: data.content,
+        author_name: data.authorName,
+        author_avatar: data.authorAvatar || null,
+        date: dateStr,
+      })
+      .select()
+      .single();
+
+    if (error || !row) {
+      console.warn("addAnnouncement failed:", error?.message);
+      return null;
+    }
+
+    const ann: Announcement = {
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      date: row.date,
+      author: {
+        name: row.author_name,
+        avatar: row.author_avatar || undefined,
+      },
+      createdAt: new Date(row.created_at).getTime(),
+    };
+
+    announcementsCache = [ann, ...announcementsCache];
+    notify();
+
+    // Also create a notification
+    await createNotification({
+      title: data.title,
+      message: data.content.substring(0, 60) + (data.content.length > 60 ? "..." : ""),
+      type: "announcement",
+      related_id: row.id,
+      related_type: "announcement",
+    });
+
+    return ann;
+  } catch (e) {
+    console.warn("addAnnouncement error:", e);
+    return null;
+  }
+}
+
+/**
+ * Create a notification in Supabase (global for all users)
+ */
+export async function createNotification(data: {
+  title: string;
+  message: string;
+  type?: string;
+  related_id?: string;
+  related_type?: string;
+  user_id?: string | null;
+}): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from("notifications").insert({
+      user_id: data.user_id || null,
+      title: data.title,
+      message: data.message,
+      type: data.type || "announcement",
+      related_id: data.related_id || null,
+      related_type: data.related_type || null,
+      is_read: false,
+    });
+
+    if (error) {
+      console.warn("createNotification failed:", error.message);
+      return false;
+    }
+
+    // Refresh cache
+    await fetchNotificationsFromSupabase();
+    return true;
+  } catch (e) {
+    console.warn("createNotification error:", e);
+    return false;
+  }
 }
 
 export function markAllNotificationsAsRead() {
@@ -157,42 +259,20 @@ export function subscribeToNotifications(fn: () => void) {
   return () => notificationListeners.delete(fn);
 }
 
-// Default seed data
-const DEFAULT_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: "1",
-    title: "Thông báo họp tháng 8",
-    content:
-      "Cuộc họp tháng 8 sẽ được tổ chức vào ngày 15/08/2026 tại phòng họp A. Tất cả thành viên vui lòng tham dự đúng giờ.",
-    date: "2026-08-01",
-    author: { name: "Nguyen Van A", avatar: undefined },
-    createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
-  },
-  {
-    id: "2",
-    title: "Kế hoạch team building",
-    content:
-      "Team building sẽ diễn ra vào cuối tuần này tại Đà Lạt. Mọi người chuẩn bị hành lý và tinh thần vui vẻ nhé!",
-    date: "2026-08-05",
-    author: { name: "Tran Thi B", avatar: undefined },
-    createdAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
-  },
-  {
-    id: "3",
-    title: "Cập nhật quy định mới",
-    content:
-      "Ban quản lý vừa ban hành quy định mới về thời gian làm việc. Vui lòng đọc kỹ và tuân thủ.",
-    date: "2026-08-07",
-    author: { name: "Le Van C", avatar: undefined },
-    createdAt: Date.now() - 1 * 24 * 60 * 60 * 1000,
-  },
-];
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMin = Math.floor((now - then) / (1000 * 60));
+  if (diffMin < 1) return "Vua xong";
+  if (diffMin < 60) return `${diffMin} phut truoc`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} gio truoc`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay} ngay truoc`;
+}
 
-// Seed on first run
-if (typeof window !== "undefined") {
-  const saved = localStorage.getItem(ANNOUNCEMENTS_KEY);
-  if (!saved) {
-    announcements = DEFAULT_ANNOUNCEMENTS;
-    saveAnnouncements();
-  }
+/* Seed on first mount (lazy, not at module init) */
+export async function seedDefaultAnnouncementsIfEmpty() {
+  if (announcementsCache.length > 0) return;
+  await fetchAnnouncementsFromSupabase();
 }

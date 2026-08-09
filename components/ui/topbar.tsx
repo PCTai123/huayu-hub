@@ -11,9 +11,16 @@ import {
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter, usePathname } from 'next/navigation';
-import { getNotifications, getUnreadCount, markAllNotificationsAsRead, subscribeToNotifications, type NotificationItem } from '@/lib/announcement-store';
+import {
+  getNotifications,
+  getUnreadCount,
+  markAllNotificationsAsRead,
+  subscribeToNotifications,
+  fetchNotificationsFromSupabase,
+  type NotificationItem,
+} from '@/lib/announcement-store';
 import { useAuthContext } from '@/features/auth/providers/auth-provider';
-import { checkAndCreateBirthdayNotifications, getSupabaseNotifications } from '@/lib/birthday-service';
+import { checkAndCreateBirthdayNotifications } from '@/lib/birthday-service';
 
 interface TopbarProps {
   onMenuToggle: () => void;
@@ -70,39 +77,26 @@ export default function Topbar({ onMenuToggle }: TopbarProps) {
 
   useEffect(() => {
     setUserProfile(loadUserProfile());
-    setNotificationList(getNotifications());
-    setUnreadCount(getUnreadCount());
+
+    // Fetch notifications from Supabase on mount
+    const loadNotifications = async () => {
+      try {
+        await checkAndCreateBirthdayNotifications();
+        await fetchNotificationsFromSupabase();
+      } catch {}
+      setNotificationList(getNotifications());
+      setUnreadCount(getUnreadCount());
+    };
+
+    loadNotifications();
 
     const unsubAnnouncements = subscribeToNotifications(() => {
       setNotificationList(getNotifications());
       setUnreadCount(getUnreadCount());
     });
 
-    // Check for upcoming birthday notifications (7 days, 1 day before)
-    // and merge Supabase notifications with local store
-    const checkBirthdays = async () => {
-      try {
-        await checkAndCreateBirthdayNotifications();
-        const supabaseNotifs = await getSupabaseNotifications();
-        if (supabaseNotifs.length > 0) {
-          // Merge Supabase notifications with local ones (avoid duplicates)
-          const localNotifs = getNotifications();
-          const localIds = new Set(localNotifs.map((n) => n.id));
-          const merged = [
-            ...supabaseNotifs.filter((n: any) => !localIds.has(n.id)),
-            ...localNotifs,
-          ];
-          setNotificationList(merged);
-          setUnreadCount(merged.filter((n: any) => n.unread).length);
-        }
-      } catch (e) {
-        // Silently fail - birthday check is non-critical
-      }
-    };
-
-    checkBirthdays();
-    // Re-check every 30 minutes
-    const interval = setInterval(checkBirthdays, 30 * 60 * 1000);
+    // Re-check every 5 minutes for new notifications
+    const interval = setInterval(loadNotifications, 5 * 60 * 1000);
 
     return () => {
       unsubAnnouncements();
