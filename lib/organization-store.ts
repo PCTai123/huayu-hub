@@ -43,7 +43,8 @@ export interface SectionVisibility {
   partners: boolean;
   feedback: boolean;
   certificates: boolean;
-  adBanner: boolean;
+  adBannerTop: boolean;
+  adBannerBottom: boolean;
 }
 
 export interface OrganizationData {
@@ -72,8 +73,11 @@ export interface OrganizationData {
   feedbackImages: FeedbackImage[];
   certificateImages: CertificateImage[];
   backgroundUrl?: string;
-  adBannerUrl?: string;
-  adBannerPosition?: string;
+  // Ad banners (top = above content, bottom = before footer)
+  adBannerTopUrl?: string;
+  adBannerTopPosition?: string;
+  adBannerBottomUrl?: string;
+  adBannerBottomPosition?: string;
   sectionVisibility: SectionVisibility;
 }
 
@@ -128,7 +132,8 @@ function mergeSectionVisibility(
     partners: saved.partners ?? defaults.partners,
     feedback: saved.feedback ?? defaults.feedback,
     certificates: saved.certificates ?? defaults.certificates,
-    adBanner: saved.adBanner ?? defaults.adBanner,
+    adBannerTop: saved.adBannerTop ?? saved.adBanner ?? defaults.adBannerTop,
+    adBannerBottom: saved.adBannerBottom ?? defaults.adBannerBottom,
   };
 }
 
@@ -189,8 +194,10 @@ const DEFAULT_DATA: OrganizationData = {
   feedbackImages: [],
   certificateImages: [],
   backgroundUrl: "",
-  adBannerUrl: "",
-  adBannerPosition: "center center",
+  adBannerTopUrl: "",
+  adBannerTopPosition: "50% 50%",
+  adBannerBottomUrl: "",
+  adBannerBottomPosition: "50% 50%",
   sectionVisibility: {
     overview: true,
     story: true,
@@ -198,7 +205,8 @@ const DEFAULT_DATA: OrganizationData = {
     partners: true,
     feedback: false,
     certificates: false,
-    adBanner: false,
+    adBannerTop: false,
+    adBannerBottom: false,
   },
 };
 
@@ -420,8 +428,10 @@ function dbToOrg(data: any): OrganizationData {
     feedbackImages: Array.isArray(data.feedback_images) ? data.feedback_images : [],
     certificateImages: Array.isArray(data.certificate_images) ? data.certificate_images : [],
     backgroundUrl: data.background_url || "",
-    adBannerUrl: data.ad_banner_url || "",
-    adBannerPosition: data.ad_banner_position || DEFAULT_DATA.adBannerPosition,
+    adBannerTopUrl: data.ad_banner_top_url || data.ad_banner_url || "",
+    adBannerTopPosition: data.ad_banner_top_position || data.ad_banner_position || DEFAULT_DATA.adBannerTopPosition,
+    adBannerBottomUrl: data.ad_banner_bottom_url || "",
+    adBannerBottomPosition: data.ad_banner_bottom_position || DEFAULT_DATA.adBannerBottomPosition,
     sectionVisibility: {
       overview: data.section_visibility?.overview ?? true,
       story: data.section_visibility?.story ?? true,
@@ -429,7 +439,8 @@ function dbToOrg(data: any): OrganizationData {
       partners: data.section_visibility?.partners ?? true,
       feedback: data.section_visibility?.feedback ?? true,
       certificates: data.section_visibility?.certificates ?? true,
-      adBanner: data.section_visibility?.ad_banner ?? true,
+      adBannerTop: data.section_visibility?.ad_banner_top ?? data.section_visibility?.ad_banner ?? true,
+      adBannerBottom: data.section_visibility?.ad_banner_bottom ?? true,
     },
   };
 }
@@ -461,8 +472,10 @@ function orgToDb(data: Partial<OrganizationData>): any {
   if (data.feedbackImages !== undefined) db.feedback_images = data.feedbackImages;
   if (data.certificateImages !== undefined) db.certificate_images = data.certificateImages;
   if (data.backgroundUrl !== undefined) db.background_url = data.backgroundUrl;
-  if (data.adBannerUrl !== undefined) db.ad_banner_url = data.adBannerUrl;
-  if (data.adBannerPosition !== undefined) db.ad_banner_position = data.adBannerPosition;
+  if (data.adBannerTopUrl !== undefined) db.ad_banner_top_url = data.adBannerTopUrl;
+  if (data.adBannerTopPosition !== undefined) db.ad_banner_top_position = data.adBannerTopPosition;
+  if (data.adBannerBottomUrl !== undefined) db.ad_banner_bottom_url = data.adBannerBottomUrl;
+  if (data.adBannerBottomPosition !== undefined) db.ad_banner_bottom_position = data.adBannerBottomPosition;
   if (data.sectionVisibility !== undefined) {
     db.section_visibility = {
       overview: data.sectionVisibility.overview,
@@ -471,7 +484,8 @@ function orgToDb(data: Partial<OrganizationData>): any {
       partners: data.sectionVisibility.partners,
       feedback: data.sectionVisibility.feedback,
       certificates: data.sectionVisibility.certificates,
-      ad_banner: data.sectionVisibility.adBanner,
+      ad_banner_top: data.sectionVisibility.adBannerTop,
+      ad_banner_bottom: data.sectionVisibility.adBannerBottom,
     };
   }
   return db;
@@ -550,10 +564,16 @@ export async function migrateImagesToCloud(): Promise<boolean> {
     if (url && !url.startsWith("data:")) updates.backgroundUrl = url;
   }
 
-  // 2. Banner
-  if (orgData.adBannerUrl?.startsWith("data:image")) {
-    const url = await uploadImageToStorage(orgData.adBannerUrl, "banners");
-    if (url && !url.startsWith("data:")) updates.adBannerUrl = url;
+  // 2. Top Banner
+  if (orgData.adBannerTopUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(orgData.adBannerTopUrl, "banners");
+    if (url && !url.startsWith("data:")) updates.adBannerTopUrl = url;
+  }
+
+  // 3. Bottom Banner
+  if (orgData.adBannerBottomUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(orgData.adBannerBottomUrl, "banners");
+    if (url && !url.startsWith("data:")) updates.adBannerBottomUrl = url;
   }
 
   // 3. Feedback images
@@ -600,9 +620,14 @@ export async function saveOrganizationWithCloudUpload(
     if (url && !url.startsWith("data:")) cloudUpdates.backgroundUrl = url;
   }
 
-  if (updates.adBannerUrl?.startsWith("data:image")) {
-    const url = await uploadImageToStorage(updates.adBannerUrl, "banners");
-    if (url && !url.startsWith("data:")) cloudUpdates.adBannerUrl = url;
+  if (updates.adBannerTopUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(updates.adBannerTopUrl, "banners");
+    if (url && !url.startsWith("data:")) cloudUpdates.adBannerTopUrl = url;
+  }
+
+  if (updates.adBannerBottomUrl?.startsWith("data:image")) {
+    const url = await uploadImageToStorage(updates.adBannerBottomUrl, "banners");
+    if (url && !url.startsWith("data:")) cloudUpdates.adBannerBottomUrl = url;
   }
 
   if (updates.feedbackImages) {
@@ -643,7 +668,8 @@ export async function saveOrganizationWithCloudUpload(
  */
 export function hasBase64Images(): boolean {
   if (orgData.backgroundUrl?.startsWith("data:image")) return true;
-  if (orgData.adBannerUrl?.startsWith("data:image")) return true;
+  if (orgData.adBannerTopUrl?.startsWith("data:image")) return true;
+  if (orgData.adBannerBottomUrl?.startsWith("data:image")) return true;
   if (orgData.feedbackImages.some((i) => i.imageUrl.startsWith("data:image"))) return true;
   if (orgData.certificateImages.some((i) => i.imageUrl.startsWith("data:image"))) return true;
   return false;

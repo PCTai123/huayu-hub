@@ -478,7 +478,8 @@
       "partners": { "label": "Partners", "description": "Auto-synced from organization info" },
       "feedback": { "label": "Student Feedback", "description": "Upload feedback images and info" },
       "certificates": { "label": "Student Certificates", "description": "Upload certificate images and info" },
-      "adBanner": { "label": "Ad Banner", "description": "8:3 banner with X/Y position adjustment" }
+      "adBannerTop": { "label": "Ad Banner (Top)", "description": "8:2 banner displayed at the top of the page" },
+      "adBannerBottom": { "label": "Ad Banner (Bottom)", "description": "8:2 banner displayed at the bottom of the page" }
     },
     "feedback": {
       "title": "Student Feedback",
@@ -505,6 +506,30 @@
       "hint": "Background will be fixed (static), content cards will scroll up and down.",
       "uploadHint": "Upload background image",
       "remove": "Remove background"
+    },
+    "adBannerTop": {
+      "title": "Ad Banner (Top)",
+      "uploadHint": "Upload banner (8:2)",
+      "positionX": "Horizontal position (X)",
+      "positionY": "Vertical position (Y)",
+      "left": "Left",
+      "centerX": "Center",
+      "right": "Right",
+      "top": "Top",
+      "centerY": "Center",
+      "bottom": "Bottom"
+    },
+    "adBannerBottom": {
+      "title": "Ad Banner (Bottom)",
+      "uploadHint": "Upload banner (8:2)",
+      "positionX": "Horizontal position (X)",
+      "positionY": "Vertical position (Y)",
+      "left": "Left",
+      "centerX": "Center",
+      "right": "Right",
+      "top": "Top",
+      "centerY": "Center",
+      "bottom": "Bottom"
     },
     "adBanner": {
       "title": "Ad Banner (8:3)",

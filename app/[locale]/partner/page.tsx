@@ -508,22 +508,22 @@ export default function PartnerPage() {
             </section>
           )}
 
-          {/* ═══════════ AD BANNER ═══════════ */}
-          {vis.adBanner && org.adBannerUrl && (
-            <section id="ad-banner">
+          {/* ═══════════ AD BANNER TOP ═══════════ */}
+          {vis.adBannerTop && org.adBannerTopUrl && (
+            <section id="ad-banner-top">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
                 className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
-                style={{ aspectRatio: "8 / 3" }}
+                style={{ aspectRatio: "8 / 2" }}
               >
                 <img
-                  src={org.adBannerUrl}
+                  src={org.adBannerTopUrl}
                   alt="Advertisement"
                   className="w-full h-full object-cover"
-                  style={{ objectPosition: org.adBannerPosition || "center center" }}
+                  style={{ objectPosition: org.adBannerTopPosition || "center center" }}
                 />
               </motion.div>
             </section>
@@ -811,6 +811,27 @@ export default function PartnerPage() {
                 )}
               </div>
             </Section>
+          )}
+
+          {/* ═══════════ AD BANNER BOTTOM ═══════════ */}
+          {vis.adBannerBottom && org.adBannerBottomUrl && (
+            <section id="ad-banner-bottom">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
+                style={{ aspectRatio: "8 / 2" }}
+              >
+                <img
+                  src={org.adBannerBottomUrl}
+                  alt="Advertisement"
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: org.adBannerBottomPosition || "center center" }}
+                />
+              </motion.div>
+            </section>
           )}
 
           {/* ═══════════ FOOTER ═══════════ */}

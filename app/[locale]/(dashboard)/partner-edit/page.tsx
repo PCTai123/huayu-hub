@@ -51,7 +51,8 @@ type SectionKey =
   | "partners"
   | "feedback"
   | "certificates"
-  | "adBanner";
+  | "adBannerTop"
+  | "adBannerBottom";
 
 const SECTION_ORDER: SectionKey[] = [
   "overview",
@@ -60,7 +61,8 @@ const SECTION_ORDER: SectionKey[] = [
   "partners",
   "feedback",
   "certificates",
-  "adBanner",
+  "adBannerTop",
+  "adBannerBottom",
 ];
 
 const LOCKED_KEYS = new Set<SectionKey>(["overview", "story", "members", "partners"]);
@@ -72,7 +74,8 @@ const SECTION_ICONS: Record<SectionKey, React.ElementType> = {
   partners: Building2,
   feedback: MessageSquare,
   certificates: Award,
-  adBanner: Megaphone,
+  adBannerTop: Megaphone,
+  adBannerBottom: Megaphone,
 };
 
 function getSections(t: ReturnType<typeof useTranslations<"partnerEdit">>): SectionDef[] {
@@ -347,17 +350,17 @@ function PartnerPreview({
         </div>
       )}
 
-      {/* Ad Banner */}
-      {org.sectionVisibility.adBanner && org.adBannerUrl && (
+      {/* Ad Banner Top */}
+      {org.sectionVisibility.adBannerTop && org.adBannerTopUrl && (
         <div
           className="rounded-xl overflow-hidden border border-gray-100"
-          style={{ aspectRatio: "8 / 3" }}
+          style={{ aspectRatio: "8 / 2" }}
         >
           <img
-            src={org.adBannerUrl}
-            alt="Ad Banner"
+            src={org.adBannerTopUrl}
+            alt="Ad Banner Top"
             className="w-full h-full object-cover"
-            style={{ objectPosition: org.adBannerPosition || "center center" }}
+            style={{ objectPosition: org.adBannerTopPosition || "center center" }}
           />
         </div>
       )}
@@ -483,6 +486,21 @@ function PartnerPreview({
         </div>
       )}
 
+      {/* Ad Banner Bottom */}
+      {org.sectionVisibility.adBannerBottom && org.adBannerBottomUrl && (
+        <div
+          className="rounded-xl overflow-hidden border border-gray-100"
+          style={{ aspectRatio: "8 / 2" }}
+        >
+          <img
+            src={org.adBannerBottomUrl}
+            alt="Ad Banner Bottom"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: org.adBannerBottomPosition || "center center" }}
+          />
+        </div>
+      )}
+
       {/* Hidden sections hint */}
       {Object.entries(org.sectionVisibility)
         .filter(([, v]) => !v)
@@ -526,9 +544,13 @@ function EditMode({
     org.certificateImages
   );
   const [backgroundUrl, setBackgroundUrl] = useState(org.backgroundUrl || "");
-  const [adBannerUrl, setAdBannerUrl] = useState(org.adBannerUrl || "");
-  const [adBannerPosition, setAdBannerPosition] = useState(
-    org.adBannerPosition || "center center"
+  const [adBannerTopUrl, setAdBannerTopUrl] = useState(org.adBannerTopUrl || "");
+  const [adBannerTopPosition, setAdBannerTopPosition] = useState(
+    org.adBannerTopPosition || "center center"
+  );
+  const [adBannerBottomUrl, setAdBannerBottomUrl] = useState(org.adBannerBottomUrl || "");
+  const [adBannerBottomPosition, setAdBannerBottomPosition] = useState(
+    org.adBannerBottomPosition || "center center"
   );
 
   const toggleSection = (key: keyof SectionVisibility) => {
@@ -543,8 +565,10 @@ function EditMode({
       feedbackImages,
       certificateImages,
       backgroundUrl,
-      adBannerUrl,
-      adBannerPosition,
+      adBannerTopUrl,
+      adBannerTopPosition,
+      adBannerBottomUrl,
+      adBannerBottomPosition,
     });
   };
 
@@ -586,13 +610,22 @@ function EditMode({
     return { x: parse(parts[0] || "center"), y: parse(parts[1] || "center") };
   };
 
-  const handleAdPosChange = (axis: "x" | "y", value: number) => {
-    const current = parsePosition(adBannerPosition);
+  const handleAdTopPosChange = (axis: "x" | "y", value: number) => {
+    const current = parsePosition(adBannerTopPosition);
     const newPos =
       axis === "x"
         ? `${value}% ${current.y}%`
         : `${current.x}% ${value}%`;
-    setAdBannerPosition(newPos);
+    setAdBannerTopPosition(newPos);
+  };
+
+  const handleAdBottomPosChange = (axis: "x" | "y", value: number) => {
+    const current = parsePosition(adBannerBottomPosition);
+    const newPos =
+      axis === "x"
+        ? `${value}% ${current.y}%`
+        : `${current.x}% ${value}%`;
+    setAdBannerBottomPosition(newPos);
   };
 
   return (
@@ -688,13 +721,27 @@ function EditMode({
         />
       )}
 
-      {/* Ad Banner Editor - always visible (like Background) so users can upload before toggling */}
+      {/* Ad Banner Top Editor */}
       {true && (
         <AdBannerEditor
-          adBannerUrl={adBannerUrl}
-          adBannerPosition={adBannerPosition}
-          onUrlChange={setAdBannerUrl}
-          onPositionChange={handleAdPosChange}
+          title={t("adBannerTop.title")}
+          adBannerUrl={adBannerTopUrl}
+          adBannerPosition={adBannerTopPosition}
+          onUrlChange={setAdBannerTopUrl}
+          onPositionChange={handleAdTopPosChange}
+          parsePosition={parsePosition}
+          t={t}
+        />
+      )}
+
+      {/* Ad Banner Bottom Editor */}
+      {true && (
+        <AdBannerEditor
+          title={t("adBannerBottom.title")}
+          adBannerUrl={adBannerBottomUrl}
+          adBannerPosition={adBannerBottomPosition}
+          onUrlChange={setAdBannerBottomUrl}
+          onPositionChange={handleAdBottomPosChange}
           parsePosition={parsePosition}
           t={t}
         />
@@ -911,6 +958,7 @@ function BackgroundEditor({
 /* ════════════════════════════════════════════ */
 
 function AdBannerEditor({
+  title,
   adBannerUrl,
   adBannerPosition,
   onUrlChange,
@@ -918,6 +966,7 @@ function AdBannerEditor({
   parsePosition,
   t,
 }: {
+  title: string;
   adBannerUrl: string;
   adBannerPosition: string;
   onUrlChange: (url: string) => void;
@@ -942,7 +991,7 @@ function AdBannerEditor({
         <div className="p-1.5 rounded-lg bg-[#C62828]/10">
           <Megaphone className="w-4 h-4 text-[#C62828]" />
         </div>
-        <h3 className="font-bold text-black">{t("adBanner.title")}</h3>
+        <h3 className="font-bold text-black">{title}</h3>
       </div>
       <div className="p-5 space-y-4">
         {/* Upload / Preview */}
@@ -950,11 +999,11 @@ function AdBannerEditor({
           {adBannerUrl ? (
             <div
               className="w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-100"
-              style={{ aspectRatio: "8 / 3" }}
+              style={{ aspectRatio: "8 / 2" }}
             >
               <img
                 src={adBannerUrl}
-                alt="Ad Banner"
+                alt={title}
                 className="w-full h-full object-cover"
                 style={{ objectPosition: adBannerPosition }}
               />
@@ -962,7 +1011,7 @@ function AdBannerEditor({
           ) : (
             <div
               className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#C62828] py-8"
-              style={{ aspectRatio: "8 / 3" }}
+              style={{ aspectRatio: "8 / 2" }}
             >
               <Upload className="w-6 h-6 text-gray-400" />
               <span className="text-sm text-gray-500">{t("adBanner.uploadHint")}</span>

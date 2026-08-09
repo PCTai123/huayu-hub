@@ -477,7 +477,8 @@
       "partners": { "label": "合作伙伴", "description": "自动从组织信息同步" },
       "feedback": { "label": "学员反馈", "description": "上传反馈图片和信息" },
       "certificates": { "label": "学员证书", "description": "上传证书图片和信息" },
-      "adBanner": { "label": "广告横幅", "description": "8:3横幅，可调整X/Y位置" }
+      "adBannerTop": { "label": "广告横幅（顶部）", "description": "8:2横幅，显示在页面顶部" },
+      "adBannerBottom": { "label": "广告横幅（底部）", "description": "8:2横幅，显示在页面底部" }
     },
     "feedback": {
       "title": "学员反馈",
@@ -504,6 +505,30 @@
       "hint": "背景将是固定的（静止），内容卡片会上下滚动。",
       "uploadHint": "上传背景图片",
       "remove": "删除背景"
+    },
+    "adBannerTop": {
+      "title": "广告横幅（顶部）",
+      "uploadHint": "上传横幅 (8:2)",
+      "positionX": "水平位置 (X)",
+      "positionY": "垂直位置 (Y)",
+      "left": "左",
+      "centerX": "中",
+      "right": "右",
+      "top": "上",
+      "centerY": "中",
+      "bottom": "下"
+    },
+    "adBannerBottom": {
+      "title": "广告横幅（底部）",
+      "uploadHint": "上传横幅 (8:2)",
+      "positionX": "水平位置 (X)",
+      "positionY": "垂直位置 (Y)",
+      "left": "左",
+      "centerX": "中",
+      "right": "右",
+      "top": "上",
+      "centerY": "中",
+      "bottom": "下"
     },
     "adBanner": {
       "title": "广告横幅 (8:3)",
