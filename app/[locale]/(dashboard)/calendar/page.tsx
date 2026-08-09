@@ -70,14 +70,16 @@ export default function CalendarPage() {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [taskData, bdayData, memberData] = await Promise.all([
+      /* Fetch members first so birthday filtering uses up-to-date member list */
+      const memberData = await fetchMembersFromSupabase();
+      setMembers(memberData || []);
+
+      const [taskData, bdayData] = await Promise.all([
         getTasks(),
         getBirthdayEvents(),
-        fetchMembersFromSupabase(),
       ]);
       setTasks(taskData || []);
       setBirthdays(bdayData || []);
-      setMembers(memberData || []);
     } catch (error) {
       console.error("Error fetching calendar data:", error);
     } finally {

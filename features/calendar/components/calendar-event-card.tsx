@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Clock, Activity, AlertCircle, Cake, MapPin, ClipboardList } from "lucide-react";
+import { Clock, CalendarDays, Activity, AlertCircle, Cake, MapPin, ClipboardList } from "lucide-react";
 
 interface CalendarEvent {
   id: string;
   title: string;
   type: "activity" | "deadline" | "birthday" | "task";
   time?: string;
+  date?: Date | string;
   description?: string;
   location?: string;
 }
@@ -17,6 +18,17 @@ interface CalendarEventCardProps {
   event: CalendarEvent;
   index?: number;
   onClick?: (event: CalendarEvent) => void;
+}
+
+function formatDateDisplay(date: Date | string | undefined): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 export function CalendarEventCard({
@@ -64,6 +76,9 @@ export function CalendarEventCard({
   };
 
   const config = getTypeConfig(event.type);
+  const formattedDate = formatDateDisplay(event.date);
+  const isAllDay = !event.time || event.time === "All day";
+  const leftColumnLabel = isAllDay ? formattedDate : event.time;
 
   return (
     <motion.div
@@ -75,13 +90,17 @@ export function CalendarEventCard({
       className={`relative overflow-hidden rounded-[16px] bg-white border border-gray-300 shadow-sm p-4 cursor-pointer hover:shadow-md transition-all duration-300`}
     >
       <div className="flex items-start gap-4">
-        {/* Time Column */}
-        <div className="flex flex-col items-center min-w-[60px]">
+        {/* Time/Date Column */}
+        <div className="flex flex-col items-center min-w-[64px]">
           <div className={`p-2 rounded-xl ${config.bg}`}>
-            <Clock className={`w-4 h-4 ${config.text}`} strokeWidth={1.5} />
+            {isAllDay ? (
+              <CalendarDays className={`w-4 h-4 ${config.text}`} strokeWidth={1.5} />
+            ) : (
+              <Clock className={`w-4 h-4 ${config.text}`} strokeWidth={1.5} />
+            )}
           </div>
-          <span className="text-sm font-medium text-black mt-2">
-            {event.time || ""}
+          <span className="text-xs font-medium text-black mt-2 text-center break-words">
+            {leftColumnLabel || ""}
           </span>
         </div>
 
@@ -94,6 +113,26 @@ export function CalendarEventCard({
           </div>
 
           <h3 className="text-base font-bold text-black mb-1">{event.title}</h3>
+
+          {/* Date row - always show if available */}
+          {formattedDate && (
+            <p className="text-sm text-gray-600 mb-1">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="w-3 h-3" strokeWidth={1.5} />
+                {formattedDate}
+              </span>
+            </p>
+          )}
+
+          {/* Time row - only show if not "All day" */}
+          {!isAllDay && event.time && (
+            <p className="text-sm text-gray-600 mb-1">
+              <span className="inline-flex items-center gap-1">
+                <Clock className="w-3 h-3" strokeWidth={1.5} />
+                {event.time}
+              </span>
+            </p>
+          )}
 
           {event.description && (
             <p className="text-sm text-gray-700 line-clamp-2">

@@ -34,10 +34,15 @@ export async function getBirthdayEvents(): Promise<BirthdayEvent[]> {
     }
 
     if (data && data.length > 0) {
-      // Enrich with team info from members
-      const members = getMembers();
-      const memberMap = new Map(members.map((m) => [m.id, m]));
-      return data.map((row: any) => ({
+      // Get current active members to filter out deleted ones
+      const activeMembers = getMembers();
+      const activeMemberIds = new Set(activeMembers.map((m) => m.id));
+      
+      // Filter: only keep birthdays for members that still exist
+      const validData = data.filter((row: any) => activeMemberIds.has(row.user_id));
+      
+      const memberMap = new Map(activeMembers.map((m) => [m.id, m]));
+      return validData.map((row: any) => ({
         id: row.id,
         user_id: row.user_id,
         full_name: row.full_name,
