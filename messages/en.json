@@ -139,7 +139,20 @@
       "location": "Enter location",
       "organizationName": "Enter organization name",
       "websiteName": "Enter website name"
-    }
+    },
+    "members": "Members",
+    "teams": "Teams",
+    "activities": "Activities",
+    "yearsActive": "Years Active",
+    "story": "Story",
+    "history": "History",
+    "mission": "Mission",
+    "achievements": "Achievements",
+    "partners": "Partners",
+    "partnersSubtitle": "Our community partners",
+    "viewAllPartners": "View all partners",
+    "relatedLinks": "Related Links",
+    "relatedLinksSubtitle": "Stay connected with us"
   },
   "orgChart": {
     "orgChart": "Organization Chart",

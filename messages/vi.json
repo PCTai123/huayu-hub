@@ -139,7 +139,20 @@
       "location": "Nhap dia diem",
       "organizationName": "Nhap ten to chuc",
       "websiteName": "Nhap ten website"
-    }
+    },
+    "members": "Thanh vien",
+    "teams": "Doi nhom",
+    "activities": "Hoat dong",
+    "yearsActive": "Nam hoat dong",
+    "story": "Cau chuyen",
+    "history": "Lich su hinh thanh",
+    "mission": "Su menh",
+    "achievements": "Thanh tich",
+    "partners": "Doi tac hien co",
+    "partnersSubtitle": "Cong dong hanh – Cung phat trien",
+    "viewAllPartners": "Xem tat ca doi tac",
+    "relatedLinks": "Trang web lien quan",
+    "relatedLinksSubtitle": "Ket noi va cap nhat thong tin moi nhat tu chung toi"
   },
   "orgChart": {
     "orgChart": "Co cau to chuc",

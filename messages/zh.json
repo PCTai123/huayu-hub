@@ -139,7 +139,20 @@
       "location": "输入地点",
       "organizationName": "输入组织名称",
       "websiteName": "输入网站名称"
-    }
+    },
+    "members": "成员",
+    "teams": "团队",
+    "activities": "活动",
+    "yearsActive": "运营年限",
+    "story": "故事",
+    "history": "历史",
+    "mission": "使命",
+    "achievements": "成就",
+    "partners": "合作伙伴",
+    "partnersSubtitle": "社区合作伙伴",
+    "viewAllPartners": "查看所有合作伙伴",
+    "relatedLinks": "相关链接",
+    "relatedLinksSubtitle": "与我们保持联系"
   },
   "orgChart": {
     "orgChart": "组织架构",
