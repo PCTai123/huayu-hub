@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import {
   Building2,
   Pencil,
@@ -17,6 +18,7 @@ import {
   MapPin,
   ExternalLink,
   Link as LinkIcon,
+  Eye,
 } from "lucide-react";
 import {
   getOrganization,
@@ -187,13 +189,23 @@ export default function OrganizationPage() {
             {t("title") || "Thông tin tổ chức"}
           </h1>
         </div>
-        <button
-          onClick={() => setIsEditOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#C62828] text-[#C62828] text-sm font-medium hover:bg-[#C62828] hover:text-white transition-colors"
-        >
-          <Pencil className="w-4 h-4" />
-          {t("edit") || "Chỉnh sửa"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/partner"
+            target="_blank"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C62828] text-white text-sm font-medium hover:bg-[#a52020] transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            Xem trang đối tác
+          </Link>
+          <button
+            onClick={() => setIsEditOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-[#C62828] text-[#C62828] text-sm font-medium hover:bg-[#C62828] hover:text-white transition-colors"
+          >
+            <Pencil className="w-4 h-4" />
+            {t("edit") || "Chỉnh sửa"}
+          </button>
+        </div>
       </motion.div>
 
       {/* Banner + Avatar Section - Facebook-style layout */}

@@ -17,12 +17,14 @@ import {
   ChevronRight,
   Activity,
   ClipboardList,
+  ExternalLink,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 const menuItems = [
   { label: 'Dashboard', href: '/', icon: LayoutDashboard },
   { label: 'Organization Info', href: '/organization', icon: Building2 },
+  { label: 'Partner Page', href: '/partner', icon: ExternalLink },
   { label: 'Org Chart', href: '/org-chart', icon: Network },
   { label: 'News Feed', href: '/news', icon: Newspaper },
   { label: 'Activities', href: '/activities', icon: Activity },
