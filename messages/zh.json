@@ -465,6 +465,7 @@
     "autoSync": "自动从组织信息同步",
     "saveAll": "保存所有更改",
     "saved": "更改已保存！",
+    "saveError": "保存失败！存储空间已满，请减小图片尺寸或删除旧图片。",
     "displayContent": "显示内容",
     "hiddenSections": "已隐藏的部分",
     "yearsOld": "岁",

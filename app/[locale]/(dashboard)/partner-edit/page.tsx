@@ -26,6 +26,7 @@ import {
   getOrganization,
   updateOrganization,
   subscribeToOrganization,
+  resizeImageToDataURL,
   type OrganizationData,
   type FeedbackImage,
   type CertificateImage,
@@ -95,6 +96,12 @@ function fileToDataURL(file: File): Promise<string> {
   });
 }
 
+/* Resize image to reduce localStorage footprint (banner images can be several MB) */
+async function fileToResizedDataURL(file: File, maxWidth = 1200, quality = 0.8): Promise<string> {
+  const dataUrl = await fileToDataURL(file);
+  return resizeImageToDataURL(dataUrl, maxWidth, quality);
+}
+
 /* ════════════════════════════════════════════ */
 /*                  MAIN PAGE                     */
 /* ════════════════════════════════════════════ */
@@ -105,6 +112,7 @@ export default function PartnerEditPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   useEffect(() => {
     setOrg(getOrganization());
@@ -118,9 +126,14 @@ export default function PartnerEditPage() {
   }, []);
 
   const handleSave = useCallback((updated: Partial<OrganizationData>) => {
-    updateOrganization(updated);
-    setShowSaved(true);
-    setTimeout(() => setShowSaved(false), 2000);
+    const success = updateOrganization(updated);
+    if (success) {
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
+    } else {
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
+    }
   }, []);
 
   if (!org) return null;
@@ -172,6 +185,21 @@ export default function PartnerEditPage() {
           >
             <Check className="w-5 h-5" />
             {t("saved")}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error toast */}
+      <AnimatePresence>
+        {showError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500 text-white shadow-lg"
+          >
+            <X className="w-5 h-5" />
+            {t("saveError")}
           </motion.div>
         )}
       </AnimatePresence>
@@ -532,7 +560,7 @@ function EditMode({
 
     for (const file of toProcess) {
       if (!file.type.startsWith("image/")) continue;
-      const dataUrl = await fileToDataURL(file);
+      const dataUrl = await fileToResizedDataURL(file, 800, 0.75);
       const newItem: any = {
         id: `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         imageUrl: dataUrl,
@@ -826,7 +854,7 @@ function BackgroundEditor({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      const dataUrl = await fileToDataURL(file);
+      const dataUrl = await fileToResizedDataURL(file, 1200, 0.8);
       onChange(dataUrl);
     }
     e.target.value = "";
@@ -900,7 +928,7 @@ function AdBannerEditor({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith("image/")) {
-      const dataUrl = await fileToDataURL(file);
+      const dataUrl = await fileToResizedDataURL(file, 1200, 0.8);
       onUrlChange(dataUrl);
     }
     e.target.value = "";

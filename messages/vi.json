@@ -466,6 +466,7 @@
     "autoSync": "Tu dong lay tu thong tin to chuc",
     "saveAll": "Luu tat ca thay doi",
     "saved": "Da luu thay doi!",
+    "saveError": "Loi luu! Kho luu tru day, vui long giam kich thuoc anh hoac xoa anh cu.",
     "displayContent": "Hien thi noi dung",
     "hiddenSections": "Cac phan bi an",
     "yearsOld": "tuoi",

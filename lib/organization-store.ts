@@ -69,6 +69,72 @@ export interface OrganizationData {
 
 const STORAGE_KEY = "huayu-hub-organization";
 
+/* ── Helper: resize image before saving ── */
+export function resizeImageToDataURL(dataUrl: string, maxWidth = 1200, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width <= maxWidth) {
+        // Re-compress even if not resized, to reduce storage footprint
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+        return;
+      }
+      const canvas = document.createElement("canvas");
+      const scale = maxWidth / img.width;
+      canvas.width = maxWidth;
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+/* ── Helper: deep merge sectionVisibility ── */
+function mergeSectionVisibility(
+  defaults: SectionVisibility,
+  saved: Partial<SectionVisibility> | undefined
+): SectionVisibility {
+  if (!saved) return { ...defaults };
+  return {
+    overview: saved.overview ?? defaults.overview,
+    story: saved.story ?? defaults.story,
+    members: saved.members ?? defaults.members,
+    partners: saved.partners ?? defaults.partners,
+    feedback: saved.feedback ?? defaults.feedback,
+    certificates: saved.certificates ?? defaults.certificates,
+    adBanner: saved.adBanner ?? defaults.adBanner,
+  };
+}
+
+/* ── Helper: deep merge organization data ── */
+function mergeOrganizationData(defaults: OrganizationData, saved: Partial<OrganizationData>): OrganizationData {
+  return {
+    ...defaults,
+    ...saved,
+    sectionVisibility: mergeSectionVisibility(
+      defaults.sectionVisibility,
+      saved.sectionVisibility
+    ),
+    stats: { ...defaults.stats, ...(saved.stats || {}) },
+  };
+}
+
 const DEFAULT_DATA: OrganizationData = {
   id: "huayu-hub",
   name: "Huayu Hub",
@@ -130,19 +196,24 @@ function loadFromStorage(): OrganizationData | null {
   if (typeof window === "undefined") return null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return mergeOrganizationData(DEFAULT_DATA, parsed);
+    }
   } catch (e) {
     console.error("Failed to load org data:", e);
   }
   return null;
 }
 
-function saveToStorage(data: OrganizationData) {
-  if (typeof window === "undefined") return;
+function saveToStorage(data: OrganizationData): boolean {
+  if (typeof window === "undefined") return false;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
   } catch (e) {
-    console.error("Failed to save org data:", e);
+    console.error("Failed to save org data (likely storage quota exceeded):", e);
+    return false;
   }
 }
 
@@ -152,7 +223,7 @@ let orgData: OrganizationData = DEFAULT_DATA;
 if (typeof window !== "undefined") {
   const saved = loadFromStorage();
   if (saved) {
-    orgData = { ...DEFAULT_DATA, ...saved };
+    orgData = saved;
   } else {
     saveToStorage(DEFAULT_DATA);
   }
@@ -166,36 +237,42 @@ function notify() {
 
 export function getOrganization(): OrganizationData {
   const saved = loadFromStorage();
-  if (saved) orgData = { ...DEFAULT_DATA, ...saved };
+  if (saved) orgData = saved;
   return { ...orgData };
 }
 
-export function updateOrganization(updates: Partial<OrganizationData>) {
-  orgData = { ...orgData, ...updates };
-  saveToStorage(orgData);
-  notify();
+export function updateOrganization(updates: Partial<OrganizationData>): boolean {
+  orgData = mergeOrganizationData(orgData, updates);
+  const success = saveToStorage(orgData);
+  if (success) {
+    notify();
+  }
+  return success;
 }
 
-export function addPartner(partner: Omit<Partner, "id">) {
+export function addPartner(partner: Omit<Partner, "id">): boolean {
   const newPartner: Partner = { ...partner, id: `p-${Date.now()}` };
   orgData.partners = [...orgData.partners, newPartner];
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function updatePartner(id: string, updates: Partial<Partner>) {
+export function updatePartner(id: string, updates: Partial<Partner>): boolean {
   orgData.partners = orgData.partners.map((p) => (p.id === id ? { ...p, ...updates } : p));
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function deletePartner(id: string) {
+export function deletePartner(id: string): boolean {
   orgData.partners = orgData.partners.filter((p) => p.id !== id);
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function updateSocialLink(platform: string, url: string) {
+export function updateSocialLink(platform: string, url: string): boolean {
   const existing = orgData.socialLinks.find((s) => s.platform === platform);
   if (existing) {
     orgData.socialLinks = orgData.socialLinks.map((s) =>
@@ -204,8 +281,9 @@ export function updateSocialLink(platform: string, url: string) {
   } else {
     orgData.socialLinks = [...orgData.socialLinks, { platform, url }];
   }
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
 export function subscribeToOrganization(fn: (data: OrganizationData) => void) {
@@ -215,64 +293,73 @@ export function subscribeToOrganization(fn: (data: OrganizationData) => void) {
 }
 
 // ── Feedback Images ──
-export function addFeedbackImage(img: Omit<FeedbackImage, "id">) {
+export function addFeedbackImage(img: Omit<FeedbackImage, "id">): boolean {
   const newItem: FeedbackImage = { ...img, id: `fb-${Date.now()}` };
   orgData.feedbackImages = [...orgData.feedbackImages, newItem];
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function updateFeedbackImage(id: string, updates: Partial<FeedbackImage>) {
+export function updateFeedbackImage(id: string, updates: Partial<FeedbackImage>): boolean {
   orgData.feedbackImages = orgData.feedbackImages.map((f) =>
     f.id === id ? { ...f, ...updates } : f
   );
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function deleteFeedbackImage(id: string) {
+export function deleteFeedbackImage(id: string): boolean {
   orgData.feedbackImages = orgData.feedbackImages.filter((f) => f.id !== id);
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
 // ── Certificate Images ──
-export function addCertificateImage(img: Omit<CertificateImage, "id">) {
+export function addCertificateImage(img: Omit<CertificateImage, "id">): boolean {
   const newItem: CertificateImage = { ...img, id: `cert-${Date.now()}` };
   orgData.certificateImages = [...orgData.certificateImages, newItem];
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function updateCertificateImage(id: string, updates: Partial<CertificateImage>) {
+export function updateCertificateImage(id: string, updates: Partial<CertificateImage>): boolean {
   orgData.certificateImages = orgData.certificateImages.map((c) =>
     c.id === id ? { ...c, ...updates } : c
   );
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function deleteCertificateImage(id: string) {
+export function deleteCertificateImage(id: string): boolean {
   orgData.certificateImages = orgData.certificateImages.filter((c) => c.id !== id);
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
 // ── Section Visibility ──
-export function updateSectionVisibility(updates: Partial<SectionVisibility>) {
-  orgData.sectionVisibility = { ...orgData.sectionVisibility, ...updates };
-  saveToStorage(orgData);
-  notify();
+export function updateSectionVisibility(updates: Partial<SectionVisibility>): boolean {
+  orgData.sectionVisibility = mergeSectionVisibility(orgData.sectionVisibility, updates);
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function setFeedbackImages(images: FeedbackImage[]) {
+export function setFeedbackImages(images: FeedbackImage[]): boolean {
   orgData.feedbackImages = images.slice(0, 10);
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }
 
-export function setCertificateImages(images: CertificateImage[]) {
+export function setCertificateImages(images: CertificateImage[]): boolean {
   orgData.certificateImages = images.slice(0, 10);
-  saveToStorage(orgData);
-  notify();
+  const success = saveToStorage(orgData);
+  if (success) notify();
+  return success;
 }

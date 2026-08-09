@@ -466,6 +466,7 @@
     "autoSync": "Auto-synced from organization info",
     "saveAll": "Save all changes",
     "saved": "Changes saved!",
+    "saveError": "Save failed! Storage is full, please reduce image sizes or remove old images.",
     "displayContent": "Display Content",
     "hiddenSections": "Hidden sections",
     "yearsOld": "years old",
