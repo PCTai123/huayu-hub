@@ -552,6 +552,15 @@
     "footer": {
       "rights": "保留所有权利。"
     },
-    "yearsOld": "岁"
+    "yearsOld": "岁",
+    "teams_labels": {
+      "media": "媒体",
+      "design": "设计",
+      "content": "内容",
+      "teaching-assistant": "助教",
+      "operation": "运营",
+      "partner": "合作伙伴",
+      "executive": "管理层"
+    }
   }
 }

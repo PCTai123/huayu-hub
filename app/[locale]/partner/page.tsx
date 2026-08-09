@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import {
   Building2,
@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Award,
   Megaphone,
+  Check,
 } from "lucide-react";
 import {
   getOrganization,
@@ -233,14 +234,14 @@ function CarouselRow({
 /*                    MAIN PAGE                 */
 /* ════════════════════════════════════════════ */
 
-const TEAM_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  media: { color: "text-red-500", bg: "bg-red-50", label: "Media" },
-  design: { color: "text-orange-500", bg: "bg-orange-50", label: "Design" },
-  content: { color: "text-yellow-500", bg: "bg-yellow-50", label: "Content" },
-  "teaching-assistant": { color: "text-green-500", bg: "bg-green-50", label: "Teaching Assistant" },
-  operation: { color: "text-blue-500", bg: "bg-blue-50", label: "Operation" },
-  partner: { color: "text-purple-500", bg: "bg-purple-50", label: "Partner" },
-  executive: { color: "text-[#C62828]", bg: "bg-red-50", label: "Executive" },
+const TEAM_CONFIG: Record<string, { color: string; bg: string; labelKey: string }> = {
+  media: { color: "text-red-500", bg: "bg-red-50", labelKey: "teams_labels.media" },
+  design: { color: "text-orange-500", bg: "bg-orange-50", labelKey: "teams_labels.design" },
+  content: { color: "text-yellow-500", bg: "bg-yellow-50", labelKey: "teams_labels.content" },
+  "teaching-assistant": { color: "text-green-500", bg: "bg-green-50", labelKey: "teams_labels.teaching-assistant" },
+  operation: { color: "text-blue-500", bg: "bg-blue-50", labelKey: "teams_labels.operation" },
+  partner: { color: "text-purple-500", bg: "bg-purple-50", labelKey: "teams_labels.partner" },
+  executive: { color: "text-[#C62828]", bg: "bg-red-50", labelKey: "teams_labels.executive" },
 };
 
 const teamNameToId: Record<string, string> = {
@@ -253,13 +254,21 @@ const teamNameToId: Record<string, string> = {
   Executive: "executive",
 };
 
+const LANGUAGES = [
+  { code: "vi", label: "Tieng Viet", flag: "🇻🇳" },
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+];
+
 export default function PartnerPage() {
   const pathname = usePathname();
-  const locale = pathname.split("/")[1] || "vi";
+  const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("partner");
 
   const [org, setOrg] = useState<OrganizationData | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [langOpen, setLangOpen] = useState(false);
 
   const [openSection, setOpenSection] = useState<Record<string, boolean>>({
     story: true,
@@ -299,7 +308,7 @@ export default function PartnerPage() {
     .filter(([id]) => id !== "other")
     .map(([id, teamMembers]) => ({
       id,
-      config: TEAM_CONFIG[id] || { color: "text-gray-500", bg: "bg-gray-50", label: id },
+      config: TEAM_CONFIG[id] || { color: "text-gray-500", bg: "bg-gray-50", labelKey: id },
       members: teamMembers,
     }));
 
@@ -362,7 +371,50 @@ export default function PartnerPage() {
               ))}
             </nav>
 
-            <div className="w-8" />
+            {/* Language Switcher */}
+            <div className="relative">
+              <button
+                onClick={() => setLangOpen(!langOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-[#C62828] hover:bg-[#C62828]/5 transition-colors"
+              >
+                <Globe className="w-4 h-4" />
+                <span className="hidden sm:inline">
+                  {LANGUAGES.find((l) => l.code === locale)?.label || locale}
+                </span>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+              {langOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setLangOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[140px]">
+                    {LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          const newPath = pathname.replace(`/${locale}`, `/${lang.code}`);
+                          router.push(newPath);
+                          setLangOpen(false);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                          locale === lang.code
+                            ? "text-[#C62828] font-medium"
+                            : "text-gray-700 hover:bg-gray-50"
+                        }`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                        {locale === lang.code && (
+                          <Check className="w-3.5 h-3.5 ml-auto" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -726,7 +778,7 @@ export default function PartnerPage() {
                               <Users className={`w-4 h-4 ${team.config.color}`} />
                             </div>
                             <div>
-                              <div className="text-sm font-bold text-gray-700">{team.config.label}</div>
+                              <div className="text-sm font-bold text-gray-700">{t(team.config.labelKey as any)}</div>
                               <div className="text-xs text-gray-400">{t("membersCount", { count: team.members.length })}</div>
                             </div>
                           </div>

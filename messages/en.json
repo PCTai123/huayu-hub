@@ -553,6 +553,15 @@
     "footer": {
       "rights": "All rights reserved."
     },
-    "yearsOld": "years old"
+    "yearsOld": "years old",
+    "teams_labels": {
+      "media": "Media",
+      "design": "Design",
+      "content": "Content",
+      "teaching-assistant": "Teaching Assistant",
+      "operation": "Operation",
+      "partner": "Partner",
+      "executive": "Executive"
+    }
   }
 }

@@ -553,6 +553,15 @@
     "footer": {
       "rights": "All rights reserved."
     },
-    "yearsOld": "tuoi"
+    "yearsOld": "tuoi",
+    "teams_labels": {
+      "media": "Media",
+      "design": "Thiet ke",
+      "content": "Noi dung",
+      "teaching-assistant": "Tro giang",
+      "operation": "Van hanh",
+      "partner": "Doi tac",
+      "executive": "Ban giam doc"
+    }
   }
 }
