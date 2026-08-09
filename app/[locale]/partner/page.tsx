@@ -721,7 +721,6 @@ export default function PartnerPage() {
                           </div>
                           <h3 className="font-bold text-black text-sm">{founder.fullName}</h3>
                           <span className="text-xs text-[#C62828] font-medium mt-0.5 inline-block">{founder.role}</span>
-                          <p className="text-xs text-gray-400 mt-1">{founder.team}</p>
                         </motion.div>
                       )}
 
@@ -744,7 +743,6 @@ export default function PartnerPage() {
                           </div>
                           <h3 className="font-bold text-black text-sm">{cf.fullName}</h3>
                           <span className="text-xs text-amber-600 font-medium mt-0.5 inline-block">{cf.role}</span>
-                          <p className="text-xs text-gray-400 mt-1">{cf.team}</p>
                         </motion.div>
                       ))}
                     </div>
@@ -764,14 +762,14 @@ export default function PartnerPage() {
                         {t("teams")}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {teams.map((team, idx) => (
                         <motion.div
                           key={team.id}
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           transition={{ delay: idx * 0.05 }}
-                          className="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+                          className="bg-white rounded-xl border border-gray-200 shadow-sm p-4"
                         >
                           <div className="flex items-center gap-2 mb-3">
                             <div className={`p-1.5 rounded-lg ${team.config.bg}`}>
@@ -784,17 +782,17 @@ export default function PartnerPage() {
                           </div>
                           <div className="space-y-2">
                             {team.members.slice(0, 4).map((member) => (
-                              <div key={member.id} className="flex items-center gap-2 p-1.5 rounded-lg bg-gray-50">
-                                <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                              <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
+                                <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
                                   {member.avatarUrl ? (
                                     <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
                                   ) : (
-                                    <span className="text-xs font-bold text-gray-400">{member.fullName.charAt(0)}</span>
+                                    <span className="text-sm font-bold text-gray-400">{member.fullName.charAt(0)}</span>
                                   )}
                                 </div>
-                                <div className="min-w-0">
-                                  <div className="text-xs font-medium text-gray-700 truncate">{member.fullName}</div>
-                                  <div className="text-[10px] text-[#C62828]">{member.role}</div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold text-gray-700 leading-tight">{member.fullName}</div>
+                                  <div className="text-xs text-[#C62828] mt-0.5">{member.role}</div>
                                 </div>
                               </div>
                             ))}
