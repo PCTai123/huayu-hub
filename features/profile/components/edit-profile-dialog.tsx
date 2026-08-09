@@ -43,6 +43,11 @@ export function EditProfileDialog({
   const [formData, setFormData] = useState(profile);
   const [isDragging, setIsDragging] = useState(false);
   const [previewAvatar, setPreviewAvatar] = useState(profile.avatar);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Sync form data when profile prop changes (e.g. when dialog reopens)
   useEffect(() => {
@@ -105,14 +110,14 @@ export function EditProfileDialog({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={isClient ? { opacity: 0 } : false}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={onClose}
         >
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={isClient ? { opacity: 0, scale: 0.9, y: 20 } : false}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}

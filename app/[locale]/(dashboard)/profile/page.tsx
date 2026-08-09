@@ -55,6 +55,11 @@ export default function ProfilePage() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileData>(guestProfile);
   const [mounted, setMounted] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     async function loadProfile() {
@@ -179,7 +184,7 @@ export default function ProfilePage() {
     <div className="space-y-6 max-w-2xl mx-auto pt-4">
       {/* Header */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={isClient ? { opacity: 0, y: -20 } : false}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="flex items-center gap-4"

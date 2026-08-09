@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Pencil, Calendar, Phone, Mail, User, Users, Briefcase, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
 interface ProfileCardProps {
   avatar?: string;
@@ -31,10 +32,15 @@ export function ProfileCard({
   onEdit,
 }: ProfileCardProps) {
   const t = useTranslations("profile");
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={isClient ? { opacity: 0, y: 20 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       className="relative overflow-hidden rounded-[20px] bg-white border border-gray-200 shadow-xl"
