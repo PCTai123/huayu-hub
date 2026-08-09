@@ -8,6 +8,7 @@ import { EditProfileDialog } from "@/features/profile/components/edit-profile-di
 import { UserCircle } from "lucide-react";
 import { updateMember, updateMemberInSupabase } from "@/lib/member-service";
 import { useAuthContext } from "@/features/auth/providers/auth-provider";
+import { createClient } from "@/lib/supabase";
 
 const STORAGE_KEY = "huayu-hub-profile";
 
@@ -24,32 +25,19 @@ interface ProfileData {
   bio: string;
 }
 
-const defaultProfile: ProfileData = {
-  id: "founder",
+/* Fallback for guests (not logged in) */
+const guestProfile: ProfileData = {
+  id: "guest",
   avatar: undefined,
-  name: "Nguyen Thanh Founder",
-  birthDate: "1985-03-15",
-  team: "Executive",
-  position: "Founder",
-  joinDate: "2020-01-01",
-  phone: "0901234567",
-  email: "founder@huayuhub.com",
-  bio: "Visionary leader and founder of HuaYu Hub",
+  name: "",
+  birthDate: "",
+  team: "",
+  position: "",
+  joinDate: "",
+  phone: "",
+  email: "",
+  bio: "",
 };
-
-function loadProfile(): ProfileData {
-  if (typeof window !== "undefined") {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Failed to load profile:", e);
-    }
-  }
-  return defaultProfile;
-}
 
 function saveProfile(data: ProfileData) {
   if (typeof window !== "undefined") {
@@ -65,26 +53,74 @@ export default function ProfilePage() {
   const t = useTranslations("profile");
   const { user, updateProfile } = useAuthContext();
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [profile, setProfile] = useState<ProfileData>(defaultProfile);
+  const [profile, setProfile] = useState<ProfileData>(guestProfile);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const loaded = loadProfile();
-    /* If auth user has data, merge it */
-    if (user) {
-      setProfile((prev) => ({
-        ...prev,
-        ...loaded,
-        id: user.id,
-        name: loaded.name || user.fullName || "",
-        email: loaded.email || user.email || "",
-        birthDate: loaded.birthDate || user.dateOfBirth || "",
-        team: loaded.team || user.team || "",
-      }));
-    } else {
-      setProfile(loaded);
+    async function loadProfile() {
+      if (user) {
+        /* Logged in: fetch full profile from Supabase for up-to-date data */
+        try {
+          const supabase = createClient();
+          const { data: profileRow, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+
+          if (profileRow && !error) {
+            setProfile({
+              id: user.id,
+              avatar: profileRow.avatar_url || undefined,
+              name: profileRow.full_name || user.fullName || "",
+              birthDate: profileRow.date_of_birth || "",
+              team: profileRow.team || "",
+              position: profileRow.role || "",
+              joinDate: profileRow.joined_date || "",
+              phone: profileRow.phone || "",
+              email: profileRow.email || user.email || "",
+              bio: profileRow.bio || "",
+            });
+            setMounted(true);
+            return;
+          }
+        } catch (e) {
+          console.warn("Failed to fetch profile from Supabase:", e);
+        }
+
+        /* Fallback: use what we have from auth context */
+        setProfile({
+          id: user.id,
+          avatar: user.avatarUrl || undefined,
+          name: user.fullName || "",
+          birthDate: user.dateOfBirth || "",
+          team: user.team || "",
+          position: user.role || "",
+          joinDate: "",
+          phone: "",
+          email: user.email || "",
+          bio: "",
+        });
+      } else {
+        /* Not logged in: check localStorage */
+        if (typeof window !== "undefined") {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+              setProfile(JSON.parse(saved));
+              setMounted(true);
+              return;
+            }
+          } catch (e) {
+            console.error("Failed to load profile:", e);
+          }
+        }
+        setProfile(guestProfile);
+      }
+      setMounted(true);
     }
-    setMounted(true);
+
+    loadProfile();
   }, [user]);
 
   const handleSave = async (data: Partial<ProfileData>) => {
@@ -102,7 +138,7 @@ export default function ProfilePage() {
       avatarUrl: updated.avatar,
     });
 
-    /* Sync Supabase profiles + birthday_events (via trigger + client fallback) */
+    /* Sync Supabase profiles + birthday_events */
     const birthDateChanged = profile.birthDate !== updated.birthDate;
     try {
       await updateMemberInSupabase(updated.id, {
@@ -114,7 +150,6 @@ export default function ProfilePage() {
         avatarUrl: updated.avatar,
       });
 
-      /* Also update auth context so user.dateOfBirth stays in sync */
       if (birthDateChanged && updated.birthDate) {
         await updateProfile({ dateOfBirth: updated.birthDate });
       }
