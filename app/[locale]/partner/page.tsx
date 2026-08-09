@@ -31,7 +31,12 @@ import {
   type FeedbackImage,
   type CertificateImage,
 } from "@/lib/organization-store";
-import { getMembers, subscribeToMembers, type Member } from "@/lib/member-service";
+import {
+  getMembers,
+  subscribeToMembers,
+  fetchMembersFromSupabase,
+  type Member,
+} from "@/lib/member-service";
 
 /* ───────────────────── Social SVG icons ───────────────────── */
 
@@ -282,6 +287,10 @@ export default function PartnerPage() {
     setMembers(getMembers());
     const unsubOrg = subscribeToOrganization((d) => setOrg(d));
     const unsubMem = subscribeToMembers((m) => setMembers(m));
+    // Sync with Supabase on mount (same as org-chart)
+    fetchMembersFromSupabase().then((fetched) => {
+      setMembers(fetched);
+    });
     return () => {
       unsubOrg();
       unsubMem();
