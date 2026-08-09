@@ -3,6 +3,13 @@
 -- NOTE: This app uses demo auth (cookie-based), not Supabase Auth.
 -- RLS policies allow anon access for read/write since auth is handled at app level.
 
+-- Drop existing tables if they were created by an older version of this migration
+-- (older versions may have had missing columns like author_name on announcements)
+DROP TABLE IF EXISTS public.post_comments;
+DROP TABLE IF EXISTS public.posts;
+DROP TABLE IF EXISTS public.announcements;
+DROP TABLE IF EXISTS public.notifications;
+
 -- ============================================
 -- POSTS TABLE (News Feed)
 -- ============================================
