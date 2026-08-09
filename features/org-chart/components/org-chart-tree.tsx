@@ -91,7 +91,7 @@ export function OrgChartTree() {
   const treeRef = useRef<HTMLDivElement>(null);
 
   const founder = members.find((m) => m.role === "Founder");
-  const coFounder = members.find((m) => m.role === "Co-Founder");
+  const coFounders = members.filter((m) => m.role === "Co-Founder");
 
   // Filter: exclude Founder and Co-Founder from teams, exclude "other" team
   const membersByTeam: Record<string, Member[]> = {};
@@ -386,12 +386,13 @@ export function OrgChartTree() {
                     </motion.div>
                   )}
 
-                  {/* Co-Founder */}
-                  {coFounder && (
+                  {/* Co-Founders */}
+                  {coFounders.map((coFounder, cfIndex) => (
                     <motion.div
+                      key={coFounder.id}
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: 0.1 }}
+                      transition={{ duration: 0.5, delay: 0.1 * (cfIndex + 1) }}
                       className="relative bg-white rounded-2xl border border-gray-200 shadow-lg p-6 w-64 text-center cursor-pointer hover:shadow-xl transition-all group"
                       onClick={() => setSelectedMember(coFounder)}
                     >
@@ -422,7 +423,7 @@ export function OrgChartTree() {
                       <h3 className="font-bold text-black">{coFounder.fullName}</h3>
                       <p className="text-xs text-gray-500 mt-1">{coFounder.email}</p>
                     </motion.div>
-                  )}
+                  ))}
                 </div>
 
                 {/* Connector line */}

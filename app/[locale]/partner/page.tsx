@@ -25,6 +25,7 @@ import {
 import {
   getOrganization,
   subscribeToOrganization,
+  fetchOrganizationFromSupabase,
   type OrganizationData,
   type Partner,
   type SocialLink,
@@ -283,14 +284,17 @@ export default function PartnerPage() {
   });
 
   useEffect(() => {
-    setOrg(getOrganization());
-    setMembers(getMembers());
-    const unsubOrg = subscribeToOrganization((d) => setOrg(d));
-    const unsubMem = subscribeToMembers((m) => setMembers(m));
-    // Sync with Supabase on mount (same as org-chart)
+    // Fetch from Supabase on mount (overrides localStorage)
+    fetchOrganizationFromSupabase().then((orgData) => {
+      setOrg(orgData);
+    });
     fetchMembersFromSupabase().then((fetched) => {
       setMembers(fetched);
     });
+
+    const unsubOrg = subscribeToOrganization((d) => setOrg(d));
+    const unsubMem = subscribeToMembers((m) => setMembers(m));
+
     return () => {
       unsubOrg();
       unsubMem();

@@ -24,7 +24,8 @@ import {
 } from "lucide-react";
 import {
   getOrganization,
-  updateOrganization,
+  fetchOrganizationFromSupabase,
+  saveOrganizationWithCloudUpload,
   subscribeToOrganization,
   resizeImageToDataURL,
   type OrganizationData,
@@ -118,8 +119,15 @@ export default function PartnerEditPage() {
   const [showError, setShowError] = useState(false);
 
   useEffect(() => {
-    setOrg(getOrganization());
-    setMembers(getMembers());
+    // Fetch from Supabase on mount (overrides localStorage)
+    fetchOrganizationFromSupabase().then((orgData) => {
+      setOrg(orgData);
+    });
+    // Also sync members
+    fetchMembersFromSupabase().then((fetched) => {
+      setMembers(fetched);
+    });
+
     const unsubOrg = subscribeToOrganization((d) => setOrg({ ...d }));
     const unsubMem = subscribeToMembers((m) => setMembers(m));
     return () => {
@@ -128,8 +136,8 @@ export default function PartnerEditPage() {
     };
   }, []);
 
-  const handleSave = useCallback((updated: Partial<OrganizationData>) => {
-    const success = updateOrganization(updated);
+  const handleSave = useCallback(async (updated: Partial<OrganizationData>) => {
+    const success = await saveOrganizationWithCloudUpload(updated);
     if (success) {
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 2000);

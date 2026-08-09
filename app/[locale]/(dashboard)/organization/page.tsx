@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import {
   getOrganization,
-  updateOrganization,
+  fetchOrganizationFromSupabase,
+  saveOrganizationWithCloudUpload,
   subscribeToOrganization,
   type OrganizationData,
   type Partner,
@@ -162,14 +163,18 @@ export default function OrganizationPage() {
   const [detailSection, setDetailSection] = useState<string | null>(null);
 
   useEffect(() => {
-    setOrg(getOrganization());
-    return subscribeToOrganization((data) => setOrg({ ...data }));
+    // Fetch from Supabase on mount (overrides localStorage)
+    fetchOrganizationFromSupabase().then((orgData) => {
+      setOrg(orgData);
+    });
+    const unsub = subscribeToOrganization((data) => setOrg({ ...data }));
+    return () => unsub();
   }, []);
 
   if (!org) return null;
 
-  const handleSave = (updated: OrganizationData) => {
-    updateOrganization(updated);
+  const handleSave = async (updated: OrganizationData) => {
+    await saveOrganizationWithCloudUpload(updated);
     setIsEditOpen(false);
   };
 

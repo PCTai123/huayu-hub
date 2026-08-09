@@ -256,15 +256,22 @@ function notify() {
 export function getOrganization(): OrganizationData {
   const saved = loadFromStorage();
   if (saved) orgData = saved;
-  // Try to sync from Supabase in background (fire-and-forget)
-  if (isSupabaseConfigured && typeof window !== "undefined") {
-    syncFromSupabase().then((synced) => {
-      if (synced) {
-        orgData = synced;
-        notify();
-      }
-    });
+  return { ...orgData };
+}
+
+/**
+ * Fetch organization data from Supabase (overrides localStorage).
+ * Call this on mount to ensure fresh data from the database.
+ */
+export async function fetchOrganizationFromSupabase(): Promise<OrganizationData> {
+  const synced = await syncFromSupabase();
+  if (synced) {
+    orgData = synced;
+    return { ...orgData };
   }
+  // fallback to localStorage
+  const saved = loadFromStorage();
+  if (saved) orgData = saved;
   return { ...orgData };
 }
 
@@ -660,6 +667,16 @@ export async function saveOrganizationWithCloudUpload(
   // Save to localStorage (now much smaller because images are URLs)
   const success = saveToStorage(orgData);
   if (success) notify();
+
+  // Sync to Supabase DB
+  if (isSupabaseConfigured && typeof window !== "undefined") {
+    try {
+      await syncToSupabase(orgData);
+    } catch (e) {
+      console.warn("Supabase sync failed in saveOrganizationWithCloudUpload:", e);
+    }
+  }
+
   return success;
 }
 
