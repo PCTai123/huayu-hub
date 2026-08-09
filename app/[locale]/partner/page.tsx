@@ -762,42 +762,42 @@ export default function PartnerPage() {
                         {t("teams")}
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                       {teams.map((team, idx) => (
-                        <motion.div
-                          key={team.id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: idx * 0.05 }}
-                          className="bg-white rounded-xl border border-gray-200 shadow-sm p-4"
-                        >
-                          <div className="flex items-center gap-2 mb-3">
-                            <div className={`p-1.5 rounded-lg ${team.config.bg}`}>
-                              <Users className={`w-4 h-4 ${team.config.color}`} />
+                      <motion.div
+                        key={team.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-hidden"
+                      >
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className={`p-2 rounded-lg ${team.config.bg}`}>
+                              <Users className={`w-5 h-5 ${team.config.color}`} />
                             </div>
                             <div>
-                              <div className="text-sm font-bold text-gray-700">{t(team.config.labelKey as any)}</div>
-                              <div className="text-xs text-gray-400">{t("membersCount", { count: team.members.length })}</div>
+                              <div className="text-base font-bold text-gray-700">{t(team.config.labelKey as any)}</div>
+                              <div className="text-sm text-gray-400">{t("membersCount", { count: team.members.length })}</div>
                             </div>
                           </div>
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             {team.members.slice(0, 4).map((member) => (
-                              <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50">
-                                <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
+                              <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
                                   {member.avatarUrl ? (
                                     <img src={member.avatarUrl} alt={member.fullName} className="w-full h-full object-cover" />
                                   ) : (
-                                    <span className="text-sm font-bold text-gray-400">{member.fullName.charAt(0)}</span>
+                                    <span className="text-lg font-bold text-gray-400">{member.fullName.charAt(0)}</span>
                                   )}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-semibold text-gray-700 leading-tight">{member.fullName}</div>
-                                  <div className="text-xs text-[#C62828] mt-0.5">{member.role}</div>
+                                <div>
+                                  <div className="text-base font-semibold text-gray-700 leading-tight">{member.fullName}</div>
+                                  <div className="text-sm text-[#C62828] mt-1">{member.role}</div>
                                 </div>
                               </div>
                             ))}
                             {team.members.length > 4 && (
-                              <div className="text-xs text-gray-400 text-center py-1">
+                              <div className="text-sm text-gray-400 text-center py-1">
                                 {t("moreMembers", { count: team.members.length - 4 })}
                               </div>
                             )}
