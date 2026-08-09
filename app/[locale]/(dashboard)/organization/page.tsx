@@ -203,8 +203,11 @@ export default function OrganizationPage() {
         transition={{ delay: 0.1 }}
         className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
       >
-        {/* Banner */}
-        <div className="relative h-48 w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50">
+        {/* Banner - Facebook ratio 851:315 ≈ 2.70:1 */}
+        <div
+          className="relative w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50"
+          style={{ aspectRatio: "851 / 315" }}
+        >
           {org.bannerUrl ? (
             <img
               src={org.bannerUrl}
