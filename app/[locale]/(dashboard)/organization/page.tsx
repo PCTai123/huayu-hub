@@ -196,14 +196,15 @@ export default function OrganizationPage() {
         </button>
       </motion.div>
 
-      {/* Banner Section - Separate from profile */}
+      {/* Banner + Avatar Section - Facebook-style layout */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm"
       >
-        <div className="relative h-72 w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50">
+        {/* Banner */}
+        <div className="relative h-48 w-full bg-gradient-to-r from-red-50 via-orange-50 to-amber-50">
           {org.bannerUrl ? (
             <img
               src={org.bannerUrl}
@@ -217,31 +218,25 @@ export default function OrganizationPage() {
             </div>
           )}
         </div>
-      </motion.div>
 
-      {/* Profile Info Section - Below banner, separate card with clear spacing */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6 mt-6"
-      >
-        <div className="flex items-start gap-6">
-          {/* Avatar */}
-          <div className="w-24 h-24 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gray-100 shrink-0">
-            {org.avatarUrl ? (
-              <img
-                src={org.avatarUrl}
-                alt={org.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#C62828] to-red-400">
-                <span className="text-white text-3xl font-bold">
-                  {org.name.charAt(0)}
-                </span>
-              </div>
-            )}
+        {/* Avatar overlapping banner */}
+        <div className="relative px-6 pb-4">
+          <div className="relative -mt-16 mb-4">
+            <div className="w-32 h-32 rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-gray-100">
+              {org.avatarUrl ? (
+                <img
+                  src={org.avatarUrl}
+                  alt={org.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#C62828] to-red-400">
+                  <span className="text-white text-4xl font-bold">
+                    {org.name.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Info */}
@@ -268,28 +263,28 @@ export default function OrganizationPage() {
               </a>
             </div>
           </div>
-        </div>
 
-        {/* Social Links */}
-        <div className="flex items-center gap-3 mt-5 pt-4 border-t border-gray-100">
-          {org.socialLinks.map((link) => (
-            <a
-              key={link.platform}
-              href={
-                link.url.startsWith("http")
-                  ? link.url
-                  : `https://${link.url}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-[#C62828] hover:text-white transition-colors"
-              title={link.platform}
-            >
-              {PLATFORM_ICONS[link.platform] || (
-                <LinkIcon className="w-4 h-4" />
-              )}
-            </a>
-          ))}
+          {/* Social Links */}
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+            {org.socialLinks.map((link) => (
+              <a
+                key={link.platform}
+                href={
+                  link.url.startsWith("http")
+                    ? link.url
+                    : `https://${link.url}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-[#C62828] hover:text-white transition-colors"
+                title={link.platform}
+              >
+                {PLATFORM_ICONS[link.platform] || (
+                  <LinkIcon className="w-4 h-4" />
+                )}
+              </a>
+            ))}
+          </div>
         </div>
       </motion.div>
 
