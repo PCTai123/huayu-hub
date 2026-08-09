@@ -5,6 +5,8 @@
 
 -- Drop existing tables if they were created by an older version of this migration
 -- (older versions may have had missing columns like author_name on announcements)
+-- Also drop legacy "comments" table (renamed to "post_comments" in this migration)
+DROP TABLE IF EXISTS public.comments CASCADE;
 DROP TABLE IF EXISTS public.post_comments;
 DROP TABLE IF EXISTS public.posts;
 DROP TABLE IF EXISTS public.announcements;

@@ -618,7 +618,7 @@ export function OrgChartTree() {
         onClose={() => setShowDeleteDialog(false)}
         teams={teams.map((t) => ({ id: t.id, name: t.name, icon: t.config.icon, memberCount: t.memberCount, members: t.members }))}
         founder={founder || null}
-        coFounder={coFounder || null}
+        coFounder={coFounders[0] || null}
         onDelete={handleDeleteMember}
       />
     </div>
