@@ -8,18 +8,16 @@ export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F6F1E8]">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-[#C62828]/5 blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-[#C62828]/5 blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(#2D2D2D 1px, transparent 1px), linear-gradient(90deg, #2D2D2D 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-          }}
-        />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Vietnam cultural background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url('/images/vietnam-bg.png')`,
+        }}
+      />
+      {/* Subtle overlay to ensure form readability */}
+      <div className="absolute inset-0 bg-[#F6F1E8]/40" />
 
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         <motion.div
@@ -44,7 +42,7 @@ export default function ForgotPasswordPage() {
             </svg>
           </div>
           <h1
-            className="text-2xl font-bold text-[#2D2D2D] sm:text-3xl"
+            className="text-2xl font-bold text-[#2D2D2D] sm:text-3xl drop-shadow-sm"
             style={{ fontFamily: "var(--font-poppins)" }}
           >
             {t("appName")}
@@ -57,7 +55,7 @@ export default function ForgotPasswordPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-8 text-center text-xs text-[#9A9A9A]"
+          className="mt-8 text-center text-xs text-[#5A5A5A] drop-shadow-sm"
         >
           {t("copyright")}
         </motion.p>

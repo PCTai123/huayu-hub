@@ -8,63 +8,18 @@ export default function LoginPage() {
   const t = useTranslations("auth");
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F6F1E8]">
-      {/* Hero background with decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Large subtle gradient blobs */}
-        <div className="absolute -top-1/4 -left-1/4 h-[600px] w-[600px] rounded-full bg-[#C62828]/5 blur-3xl" />
-        <div className="absolute -bottom-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-[#C62828]/5 blur-3xl" />
-        <div className="absolute top-1/3 left-1/2 h-[400px] w-[400px] -translate-x-1/2 rounded-full bg-[#D4A574]/10 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Vietnam cultural background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url('/images/vietnam-bg.png')`,
+        }}
+      />
+      {/* Subtle overlay to ensure form readability */}
+      <div className="absolute inset-0 bg-[#F6F1E8]/40" />
 
-        {/* Grid pattern overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(#2D2D2D 1px, transparent 1px), linear-gradient(90deg, #2D2D2D 1px, transparent 1px)`,
-            backgroundSize: "60px 60px",
-          }}
-        />
-
-        {/* Floating decorative shapes */}
-        <motion.div
-          animate={{
-            y: [0, -20, 0],
-            rotate: [0, 5, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute top-[15%] left-[10%] h-32 w-32 rounded-2xl border border-[#C62828]/10 bg-white/20 backdrop-blur-sm"
-        />
-        <motion.div
-          animate={{
-            y: [0, 15, 0],
-            rotate: [0, -5, 0],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute bottom-[20%] right-[8%] h-24 w-24 rounded-full border border-[#D4A574]/20 bg-white/20 backdrop-blur-sm"
-        />
-        <motion.div
-          animate={{
-            y: [0, -10, 0],
-            x: [0, 10, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="absolute top-[40%] right-[15%] h-16 w-16 rounded-xl border border-white/30 bg-white/30 backdrop-blur-sm"
-        />
-      </div>
-
-      {/* Content */}
+      {/* Content - centered both horizontally and vertically */}
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
         {/* Logo / Brand */}
         <motion.div
@@ -89,7 +44,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1
-            className="text-2xl font-bold text-[#2D2D2D] sm:text-3xl"
+            className="text-2xl font-bold text-[#2D2D2D] sm:text-3xl drop-shadow-sm"
             style={{ fontFamily: "var(--font-poppins)" }}
           >
             {t("appName")}
@@ -104,7 +59,7 @@ export default function LoginPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-8 text-center text-xs text-[#9A9A9A]"
+          className="mt-8 text-center text-xs text-[#5A5A5A] drop-shadow-sm"
         >
           {t("copyright")}
         </motion.p>
