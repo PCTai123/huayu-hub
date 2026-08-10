@@ -512,19 +512,19 @@ async function syncFromSupabase(): Promise<OrganizationData | null> {
 
     if (error) {
       if (error.code === "PGRST116") {
-        // Row not found — create default with full data
-        const dbDefault = orgToDb(DEFAULT_DATA);
+        // Row not found — insert minimal stub so upsert works later.
+        // Don't insert full defaults (may exceed DB limits with large images).
         const { error: insertError } = await supabase
           .from("organizations")
-          .insert([{ id: "huayu-hub", ...dbDefault }]);
+          .insert([{ id: "huayu-hub", name: "Huayu Hub" }]);
         if (insertError) {
           console.warn("Failed to create default org:", insertError.message);
-        } else {
-          // Save default to localStorage as well
-          orgData = DEFAULT_DATA;
-          saveToStorage(orgData);
         }
-        return DEFAULT_DATA;
+        // Preserve user's local edits (merge localStorage with defaults)
+        const cached = loadFromStorage();
+        orgData = cached || DEFAULT_DATA;
+        saveToStorage(orgData);
+        return orgData;
       }
       console.warn("Supabase sync failed:", error.message);
       return null;
@@ -532,10 +532,16 @@ async function syncFromSupabase(): Promise<OrganizationData | null> {
 
     if (data) {
       const synced = dbToOrg(data);
-      // Save to localStorage as cache
-      orgData = synced;
+      // Merge with localStorage: Supabase takes priority for fields it has,
+      // but localStorage may have newer fields not yet in DB schema.
+      const cached = loadFromStorage();
+      if (cached) {
+        orgData = mergeOrganizationData(synced, cached);
+      } else {
+        orgData = synced;
+      }
       saveToStorage(orgData);
-      return synced;
+      return orgData;
     }
   } catch (err) {
     console.warn("Supabase sync error:", err);
