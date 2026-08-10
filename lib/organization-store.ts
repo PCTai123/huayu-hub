@@ -532,11 +532,12 @@ async function syncFromSupabase(): Promise<OrganizationData | null> {
 
     if (data) {
       const synced = dbToOrg(data);
-      // Merge with localStorage: Supabase takes priority for fields it has,
-      // but localStorage may have newer fields not yet in DB schema.
+      // Merge strategy: Supabase (synced) has highest priority, then localStorage
+      // This ensures data edited on one device shows up on ALL devices.
       const cached = loadFromStorage();
       if (cached) {
-        orgData = mergeOrganizationData(synced, cached);
+        // Start with cached (local), then overlay synced (DB) on top
+        orgData = mergeOrganizationData(cached, synced);
       } else {
         orgData = synced;
       }
