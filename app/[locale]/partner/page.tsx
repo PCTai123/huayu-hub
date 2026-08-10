@@ -530,7 +530,7 @@ export default function PartnerPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
                 className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
-                style={{ aspectRatio: "8 / 2" }}
+                style={{ aspectRatio: "4 / 1" }}
               >
                 <img
                   src={org.adBannerTopUrl}
@@ -849,7 +849,7 @@ export default function PartnerPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
                 className="rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
-                style={{ aspectRatio: "8 / 2" }}
+                style={{ aspectRatio: "4 / 1" }}
               >
                 <img
                   src={org.adBannerBottomUrl}

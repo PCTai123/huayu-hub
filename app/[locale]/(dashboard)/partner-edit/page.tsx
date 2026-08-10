@@ -362,7 +362,7 @@ function PartnerPreview({
       {org.sectionVisibility.adBannerTop && org.adBannerTopUrl && (
         <div
           className="rounded-xl overflow-hidden border border-gray-100"
-          style={{ aspectRatio: "8 / 2" }}
+          style={{ aspectRatio: "4 / 1" }}
         >
           <img
             src={org.adBannerTopUrl}
@@ -498,7 +498,7 @@ function PartnerPreview({
       {org.sectionVisibility.adBannerBottom && org.adBannerBottomUrl && (
         <div
           className="rounded-xl overflow-hidden border border-gray-100"
-          style={{ aspectRatio: "8 / 2" }}
+          style={{ aspectRatio: "4 / 1" }}
         >
           <img
             src={org.adBannerBottomUrl}
@@ -1007,7 +1007,7 @@ function AdBannerEditor({
           {adBannerUrl ? (
             <div
               className="w-full rounded-xl overflow-hidden border border-gray-200 bg-gray-100"
-              style={{ aspectRatio: "8 / 2" }}
+              style={{ aspectRatio: "4 / 1" }}
             >
               <img
                 src={adBannerUrl}
@@ -1019,7 +1019,7 @@ function AdBannerEditor({
           ) : (
             <div
               className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 hover:border-[#C62828] py-8"
-              style={{ aspectRatio: "8 / 2" }}
+              style={{ aspectRatio: "4 / 1" }}
             >
               <Upload className="w-6 h-6 text-gray-400" />
               <span className="text-sm text-gray-500">{t("adBanner.uploadHint")}</span>
