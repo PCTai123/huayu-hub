@@ -425,7 +425,9 @@ function dbToOrg(data: any): OrganizationData {
     mission: data.mission || "",
     achievements: Array.isArray(data.achievements) ? data.achievements : [],
     partners: Array.isArray(data.partners) ? data.partners : [],
-    socialLinks: Array.isArray(data.social_links) ? data.social_links : [],
+    socialLinks: (Array.isArray(data.social_links) && data.social_links.length > 0)
+      ? data.social_links
+      : DEFAULT_DATA.socialLinks,
     stats: {
       members: data.stats?.members ?? DEFAULT_DATA.stats.members,
       teams: data.stats?.teams ?? DEFAULT_DATA.stats.teams,
