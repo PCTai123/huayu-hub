@@ -510,8 +510,18 @@ async function syncFromSupabase(): Promise<OrganizationData | null> {
 
     if (error) {
       if (error.code === "PGRST116") {
-        // Row not found — create default
-        await supabase.from("organizations").insert([{ id: "huayu-hub", name: "Huayu Hub" }]);
+        // Row not found — create default with full data
+        const dbDefault = orgToDb(DEFAULT_DATA);
+        const { error: insertError } = await supabase
+          .from("organizations")
+          .insert([{ id: "huayu-hub", ...dbDefault }]);
+        if (insertError) {
+          console.warn("Failed to create default org:", insertError.message);
+        } else {
+          // Save default to localStorage as well
+          orgData = DEFAULT_DATA;
+          saveToStorage(orgData);
+        }
         return DEFAULT_DATA;
       }
       console.warn("Supabase sync failed:", error.message);
@@ -538,10 +548,10 @@ async function syncToSupabase(updates: Partial<OrganizationData>): Promise<boole
     const dbData = orgToDb(updates);
     if (Object.keys(dbData).length === 0) return true;
 
+    // Use upsert with id — ensures row is created if it doesn't exist
     const { error } = await supabase
       .from("organizations")
-      .update(dbData)
-      .eq("id", "huayu-hub");
+      .upsert({ id: "huayu-hub", ...dbData }, { onConflict: "id" });
 
     if (error) {
       console.warn("Supabase save failed:", error.message);

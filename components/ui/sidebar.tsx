@@ -26,7 +26,6 @@ const menuItems = [
   { label: 'Organization Info', href: '/organization', icon: Building2 },
   { label: 'Partner Page', href: '/partner-edit', icon: ExternalLink },
   { label: 'Org Chart', href: '/org-chart', icon: Network },
-  { label: 'News Feed', href: '/news', icon: Newspaper },
   { label: 'Activities', href: '/activities', icon: Activity },
   { label: 'Announcements', href: '/announcements', icon: Megaphone },
   { label: 'Documents', href: '/documents', icon: FolderOpen },

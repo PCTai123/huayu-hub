@@ -33,7 +33,7 @@ import {
   type CertificateImage,
   type SectionVisibility,
 } from "@/lib/organization-store";
-import { getMembers, subscribeToMembers, type Member } from "@/lib/member-service";
+import { getMembers, subscribeToMembers, fetchMembersFromSupabase, type Member } from "@/lib/member-service";
 
 /* ─────────── Section config ─────────── */
 
