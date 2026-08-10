@@ -678,9 +678,15 @@ export async function saveOrganizationWithCloudUpload(
     }
   }
 
-  // Apply cloud URLs
-  if (Object.keys(cloudUpdates).length > 0) {
-    orgData = mergeOrganizationData(orgData, cloudUpdates);
+  // Start with user's non-image text/data updates
+  const mergedUpdates: Partial<OrganizationData> = { ...updates };
+
+  // Override any image fields with cloud URLs if uploaded
+  Object.assign(mergedUpdates, cloudUpdates);
+
+  // Merge into orgData so in-memory state is up to date
+  if (Object.keys(mergedUpdates).length > 0) {
+    orgData = mergeOrganizationData(orgData, mergedUpdates);
   }
 
   // Save to localStorage (now much smaller because images are URLs)
