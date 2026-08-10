@@ -653,21 +653,37 @@ export default function PartnerPage() {
             <Section id="partners" title={t("sections.partners")} icon={Globe}>
               <Card>
                 <div className="p-5">
-                  <p className="text-sm text-gray-500 mb-4">{t("sections.partnersSubtitle")}</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  <p className="text-sm text-gray-500 mb-6">{t("sections.partnersSubtitle")}</p>
+                  <div className="flex flex-wrap justify-center gap-4">
                     {org.partners.map((partner) => (
                       <a
                         key={partner.id}
                         href={partner.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex flex-col items-center p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-sm transition-all group"
+                        className="flex flex-col items-center w-[140px] sm:w-[160px] p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-md transition-all group bg-white"
                       >
-                        <div className="w-12 h-12 rounded-full bg-[#C62828]/10 flex items-center justify-center mb-2 group-hover:bg-[#C62828]/20 transition-colors">
-                          <Globe className="w-6 h-6 text-[#C62828]" />
+                        {/* Avatar / Logo — 1:1 ratio */}
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center group-hover:ring-2 group-hover:ring-[#C62828]/20 transition-all">
+                          {partner.logoUrl ? (
+                            <img
+                              src={partner.logoUrl}
+                              alt={partner.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <Globe className="w-8 h-8 text-[#C62828]/60" />
+                          )}
                         </div>
-                        <span className="text-sm font-medium text-gray-700 text-center">{partner.name}</span>
-                        <span className="text-xs text-gray-400 mt-1 truncate max-w-full">{partner.website.replace(/^https?:\/\//, "")}</span>
+                        {/* Name */}
+                        <span className="text-sm font-semibold text-gray-800 text-center leading-tight line-clamp-2 min-h-[2.5rem]">
+                          {partner.name}
+                        </span>
+                        {/* Website link hint */}
+                        <span className="text-[10px] text-gray-400 mt-1.5 truncate max-w-full">
+                          {partner.website.replace(/^https?:\/\//, "")}
+                        </span>
                       </a>
                     ))}
                   </div>
