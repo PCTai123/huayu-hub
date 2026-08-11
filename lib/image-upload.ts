@@ -55,8 +55,7 @@ export async function uploadImageToStorage(
       });
 
     if (uploadError) {
-      // Bucket might not exist yet, try to create it (this requires admin rights)
-      console.error("Upload error:", uploadError.message);
+      console.error("[uploadImageToStorage] Upload error:", uploadError.code, uploadError.message);
       return dataUrl; // fallback to base64
     }
 

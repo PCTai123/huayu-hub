@@ -548,6 +548,7 @@
       "overview": "总览",
       "story": "故事",
       "members": "成员",
+      "partners": "合作伙伴",
       "feedback": "反馈",
       "certificates": "证书"
     },
@@ -579,6 +580,7 @@
       "rights": "保留所有权利。"
     },
     "yearsOld": "岁",
+    "partnerWebsite": "合作伙伴网站",
     "teams_labels": {
       "media": "媒体",
       "design": "设计",

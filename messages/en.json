@@ -549,6 +549,7 @@
       "overview": "Overview",
       "story": "Story",
       "members": "Members",
+      "partners": "Partners",
       "feedback": "Feedback",
       "certificates": "Certificates"
     },
@@ -580,6 +581,7 @@
       "rights": "All rights reserved."
     },
     "yearsOld": "years old",
+    "partnerWebsite": "Partner Website",
     "teams_labels": {
       "media": "Media",
       "design": "Design",

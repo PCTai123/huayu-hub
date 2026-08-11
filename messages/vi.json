@@ -549,6 +549,7 @@
       "overview": "Tong quan",
       "story": "Cau chuyen",
       "members": "Thanh vien",
+      "partners": "Doi tac",
       "feedback": "Feedback",
       "certificates": "Chung chi"
     },
@@ -580,6 +581,7 @@
       "rights": "All rights reserved."
     },
     "yearsOld": "tuoi",
+    "partnerWebsite": "Website doi tac",
     "teams_labels": {
       "media": "Media",
       "design": "Thiet ke",

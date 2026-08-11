@@ -79,6 +79,8 @@ export interface OrganizationData {
   adBannerBottomUrl?: string;
   adBannerBottomPosition?: string;
   sectionVisibility: SectionVisibility;
+  /** ISO timestamp of last save (for conflict resolution) */
+  lastSavedAt?: string;
 }
 
 const STORAGE_KEY = "huayu-hub-organization";
@@ -150,6 +152,50 @@ function mergeOrganizationData(defaults: OrganizationData, saved: Partial<Organi
   };
 }
 
+/* ── Helper: smart merge from DB — empty DB values don't overwrite local data ── */
+function smartMergeFromDB(local: OrganizationData, db: OrganizationData): OrganizationData {
+  const pick = <T>(localVal: T, dbVal: T): T => {
+    // Use DB value only if it's meaningful (non-empty string, non-empty array, etc.)
+    if (typeof dbVal === "string" && dbVal === "") return localVal;
+    if (Array.isArray(dbVal) && dbVal.length === 0) return localVal;
+    if (dbVal === null || dbVal === undefined) return localVal;
+    return dbVal;
+  };
+
+  return {
+    id: db.id || local.id,
+    name: pick(local.name, db.name),
+    tagline: pick(local.tagline, db.tagline),
+    location: pick(local.location, db.location),
+    email: pick(local.email, db.email),
+    website: pick(local.website, db.website),
+    avatarUrl: pick(local.avatarUrl, db.avatarUrl),
+    bannerUrl: pick(local.bannerUrl, db.bannerUrl),
+    bannerPosition: pick(local.bannerPosition, db.bannerPosition),
+    story: pick(local.story, db.story),
+    history: pick(local.history, db.history),
+    mission: pick(local.mission, db.mission),
+    achievements: pick(local.achievements, db.achievements),
+    partners: pick(local.partners, db.partners),
+    socialLinks: pick(local.socialLinks, db.socialLinks),
+    stats: db.stats && Object.values(db.stats).some(v => v !== 0)
+      ? { ...local.stats, ...db.stats }
+      : local.stats,
+    feedbackImages: pick(local.feedbackImages, db.feedbackImages),
+    certificateImages: pick(local.certificateImages, db.certificateImages),
+    backgroundUrl: pick(local.backgroundUrl, db.backgroundUrl),
+    adBannerTopUrl: pick(local.adBannerTopUrl, db.adBannerTopUrl),
+    adBannerTopPosition: pick(local.adBannerTopPosition, db.adBannerTopPosition),
+    adBannerBottomUrl: pick(local.adBannerBottomUrl, db.adBannerBottomUrl),
+    adBannerBottomPosition: pick(local.adBannerBottomPosition, db.adBannerBottomPosition),
+    sectionVisibility: mergeSectionVisibility(
+      local.sectionVisibility,
+      db.sectionVisibility
+    ),
+    lastSavedAt: local.lastSavedAt || db.lastSavedAt,
+  };
+}
+
 const DEFAULT_DATA: OrganizationData = {
   id: "huayu-hub",
   name: "Huayu Hub",
@@ -208,6 +254,7 @@ const DEFAULT_DATA: OrganizationData = {
     adBannerTop: false,
     adBannerBottom: false,
   },
+  lastSavedAt: "",
 };
 
 function loadFromStorage(): OrganizationData | null {
@@ -227,7 +274,9 @@ function loadFromStorage(): OrganizationData | null {
 function saveToStorage(data: OrganizationData): boolean {
   if (typeof window === "undefined") return false;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    // Stamp lastSavedAt for conflict resolution
+    const stamped = { ...data, lastSavedAt: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stamped));
     return true;
   } catch (e) {
     console.error("Failed to save org data (likely storage quota exceeded):", e);
@@ -276,14 +325,16 @@ export async function fetchOrganizationFromSupabase(): Promise<OrganizationData>
 }
 
 export function updateOrganization(updates: Partial<OrganizationData>): boolean {
-  orgData = mergeOrganizationData(orgData, updates);
+  // Always stamp lastSavedAt so DB timestamp comparison works
+  const stampedUpdates = { ...updates, lastSavedAt: new Date().toISOString() };
+  orgData = mergeOrganizationData(orgData, stampedUpdates);
   const success = saveToStorage(orgData);
   if (success) {
     notify();
   }
   // Fire-and-forget sync to Supabase
   if (isSupabaseConfigured && typeof window !== "undefined") {
-    syncToSupabase(updates).catch(() => {});
+    syncToSupabase(stampedUpdates).catch(() => {});
   }
   return success;
 }
@@ -410,47 +461,57 @@ let supabaseCache: OrganizationData | null = null;
 let isSyncing = false;
 
 function dbToOrg(data: any): OrganizationData {
+  // dbToOrg converts DB row to OrganizationData.
+  // IMPORTANT: Do NOT fallback to DEFAULT_DATA for data fields.
+  // If DB has null/empty, return empty/null so smartMergeFromDB can preserve local data.
+  const parseBool = (val: any): boolean | undefined => {
+    if (val === true || val === false) return val;
+    if (val === null || val === undefined) return undefined;
+    return Boolean(val);
+  };
+
+  const sv = data.section_visibility || {};
+
   return {
-    id: data.id || DEFAULT_DATA.id,
-    name: data.name || DEFAULT_DATA.name,
-    tagline: data.tagline || DEFAULT_DATA.tagline,
-    location: data.location || DEFAULT_DATA.location,
-    email: data.email || DEFAULT_DATA.email,
-    website: data.website || DEFAULT_DATA.website,
+    id: data.id || "huayu-hub",
+    name: data.name || "",
+    tagline: data.tagline || "",
+    location: data.location || "",
+    email: data.email || "",
+    website: data.website || "",
     avatarUrl: data.avatar_url || "",
     bannerUrl: data.banner_url || "",
-    bannerPosition: data.banner_position || DEFAULT_DATA.bannerPosition,
+    bannerPosition: data.banner_position || "",
     story: data.story || "",
     history: data.history || "",
     mission: data.mission || "",
     achievements: Array.isArray(data.achievements) ? data.achievements : [],
     partners: Array.isArray(data.partners) ? data.partners : [],
-    socialLinks: (Array.isArray(data.social_links) && data.social_links.length > 0)
-      ? data.social_links
-      : DEFAULT_DATA.socialLinks,
+    socialLinks: Array.isArray(data.social_links) ? data.social_links : [],
     stats: {
-      members: data.stats?.members ?? DEFAULT_DATA.stats.members,
-      teams: data.stats?.teams ?? DEFAULT_DATA.stats.teams,
-      activities: data.stats?.activities ?? DEFAULT_DATA.stats.activities,
-      yearsActive: data.stats?.years_active ?? DEFAULT_DATA.stats.yearsActive,
+      members: data.stats?.members ?? 0,
+      teams: data.stats?.teams ?? 0,
+      activities: data.stats?.activities ?? 0,
+      yearsActive: data.stats?.years_active ?? 0,
     },
     feedbackImages: Array.isArray(data.feedback_images) ? data.feedback_images : [],
     certificateImages: Array.isArray(data.certificate_images) ? data.certificate_images : [],
     backgroundUrl: data.background_url || "",
     adBannerTopUrl: data.ad_banner_top_url || data.ad_banner_url || "",
-    adBannerTopPosition: data.ad_banner_top_position || data.ad_banner_position || DEFAULT_DATA.adBannerTopPosition,
+    adBannerTopPosition: data.ad_banner_top_position || data.ad_banner_position || "",
     adBannerBottomUrl: data.ad_banner_bottom_url || "",
-    adBannerBottomPosition: data.ad_banner_bottom_position || DEFAULT_DATA.adBannerBottomPosition,
+    adBannerBottomPosition: data.ad_banner_bottom_position || "",
     sectionVisibility: {
-      overview: data.section_visibility?.overview ?? true,
-      story: data.section_visibility?.story ?? true,
-      members: data.section_visibility?.members ?? true,
-      partners: data.section_visibility?.partners ?? true,
-      feedback: data.section_visibility?.feedback ?? true,
-      certificates: data.section_visibility?.certificates ?? true,
-      adBannerTop: data.section_visibility?.ad_banner_top ?? data.section_visibility?.ad_banner ?? true,
-      adBannerBottom: data.section_visibility?.ad_banner_bottom ?? true,
+      overview: parseBool(sv?.overview) ?? true,
+      story: parseBool(sv?.story) ?? true,
+      members: parseBool(sv?.members) ?? true,
+      partners: parseBool(sv?.partners) ?? true,
+      feedback: parseBool(sv?.feedback) ?? false,
+      certificates: parseBool(sv?.certificates) ?? false,
+      adBannerTop: parseBool(sv?.ad_banner_top ?? sv?.ad_banner) ?? false,
+      adBannerBottom: parseBool(sv?.ad_banner_bottom) ?? false,
     },
+    lastSavedAt: data.last_saved_at || "",
   };
 }
 
@@ -497,6 +558,8 @@ function orgToDb(data: Partial<OrganizationData>): any {
       ad_banner_bottom: data.sectionVisibility.adBannerBottom,
     };
   }
+  // Send lastSavedAt to DB so we can resolve conflicts
+  if (data.lastSavedAt !== undefined) db.last_saved_at = data.lastSavedAt;
   return db;
 }
 
@@ -532,15 +595,33 @@ async function syncFromSupabase(): Promise<OrganizationData | null> {
 
     if (data) {
       const synced = dbToOrg(data);
-      // Merge strategy: Supabase (synced) has highest priority, then localStorage
-      // This ensures data edited on one device shows up on ALL devices.
       const cached = loadFromStorage();
+      
+      // Timestamp-based merge: DB wins only if DB is newer than local.
+      // Otherwise keep local data (user edits should not be overwritten by stale DB).
+      const dbTime = data.updated_at ? new Date(data.updated_at).getTime() : 0;
+      const localTime = cached?.lastSavedAt ? new Date(cached.lastSavedAt).getTime() : 0;
+      
       if (cached) {
-        // Start with cached (local), then overlay synced (DB) on top
-        orgData = mergeOrganizationData(cached, synced);
+        // Add 2s buffer to local time to prevent DB from overwriting
+        // recently-saved local data due to clock skew.
+        if (dbTime > localTime + 2000) {
+          // DB is newer — merge DB into local (DB fields take priority)
+          orgData = smartMergeFromDB(cached, synced);
+          console.log("[syncFromSupabase] DB is newer (" + new Date(dbTime).toISOString() + " > " + new Date(localTime).toISOString() + " + 2s). Merged DB into local.");
+        } else {
+          // Local is newer or equal — keep local data entirely
+          orgData = cached;
+          console.log("[syncFromSupabase] Local is newer or equal (" + new Date(localTime).toISOString() + " >= " + new Date(dbTime).toISOString() + "). Kept local data.");
+        }
       } else {
-        orgData = synced;
+        // No local cache — accept DB data
+        orgData = smartMergeFromDB(DEFAULT_DATA, synced);
       }
+      
+      // Always stamp lastSavedAt so local data is considered "fresh"
+      orgData = { ...orgData, lastSavedAt: orgData.lastSavedAt || new Date().toISOString() };
+      
       saveToStorage(orgData);
       return orgData;
     }
@@ -554,21 +635,23 @@ async function syncToSupabase(updates: Partial<OrganizationData>): Promise<boole
   if (!isSupabaseConfigured || typeof window === "undefined") return false;
   try {
     const supabase = createClient();
-    const dbData = orgToDb(updates);
-    if (Object.keys(dbData).length === 0) return true;
+    // Always send the full orgData to DB, not just partial updates.
+    // This prevents stale data from remaining in DB when partial fields are sent.
+    const fullDbData = orgToDb(orgData);
+    if (Object.keys(fullDbData).length === 0) return true;
 
     // Use upsert with id — ensures row is created if it doesn't exist
     const { error } = await supabase
       .from("organizations")
-      .upsert({ id: "huayu-hub", ...dbData }, { onConflict: "id" });
+      .upsert({ id: "huayu-hub", ...fullDbData }, { onConflict: "id" });
 
     if (error) {
-      console.warn("Supabase save failed:", error.message);
+      console.error("[syncToSupabase] DB save failed:", error.code, error.message);
       return false;
     }
     return true;
   } catch (err) {
-    console.warn("Supabase save error:", err);
+    console.error("[syncToSupabase] DB save error:", err);
     return false;
   }
 }
@@ -689,20 +772,30 @@ export async function saveOrganizationWithCloudUpload(
     orgData = mergeOrganizationData(orgData, mergedUpdates);
   }
 
+  // Stamp lastSavedAt into memory so DB sync gets the correct timestamp
+  const now = new Date().toISOString();
+  orgData = { ...orgData, lastSavedAt: now };
+
   // Save to localStorage (now much smaller because images are URLs)
-  const success = saveToStorage(orgData);
-  if (success) notify();
+  const localSuccess = saveToStorage(orgData);
+  if (localSuccess) notify();
 
   // Sync to Supabase DB
+  let dbSuccess = false;
   if (isSupabaseConfigured && typeof window !== "undefined") {
     try {
-      await syncToSupabase(orgData);
+      dbSuccess = await syncToSupabase(orgData);
+      if (!dbSuccess) {
+        console.warn("[saveOrganizationWithCloudUpload] DB sync failed — data saved locally only");
+      }
     } catch (e) {
-      console.warn("Supabase sync failed in saveOrganizationWithCloudUpload:", e);
+      console.error("[saveOrganizationWithCloudUpload] DB sync error:", e);
     }
   }
 
-  return success;
+  // Return true if either localStorage or DB succeeded
+  // (localStorage success means data persists for this session/device)
+  return localSuccess || dbSuccess;
 }
 
 /**

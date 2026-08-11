@@ -331,6 +331,7 @@ export default function PartnerPage() {
   const navLinks = [
     ...(vis.overview ? [{ label: t("nav.overview"), href: "#overview" }] : []),
     ...(vis.story ? [{ label: t("nav.story"), href: "#story" }] : []),
+    ...(vis.partners ? [{ label: t("nav.partners"), href: "#partners" }] : []),
     ...(vis.members ? [{ label: t("nav.members"), href: "#members" }] : []),
     ...(vis.feedback ? [{ label: t("nav.feedback"), href: "#feedback" }] : []),
     ...(vis.certificates ? [{ label: t("nav.certificates"), href: "#certificates" }] : []),
@@ -654,17 +655,17 @@ export default function PartnerPage() {
               <Card>
                 <div className="p-5">
                   <p className="text-sm text-gray-500 mb-6">{t("sections.partnersSubtitle")}</p>
-                  <div className="flex flex-wrap justify-center gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {org.partners.map((partner) => (
                       <a
                         key={partner.id}
                         href={partner.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex flex-col items-center w-[140px] sm:w-[160px] p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-md transition-all group bg-white"
+                        className="flex flex-col items-center p-4 rounded-xl border border-gray-100 hover:border-[#C62828] hover:shadow-md transition-all group bg-white"
                       >
                         {/* Avatar / Logo — 1:1 ratio */}
-                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center group-hover:ring-2 group-hover:ring-[#C62828]/20 transition-all">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mb-3 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center group-hover:ring-2 group-hover:ring-[#C62828]/20 transition-all shrink-0">
                           {partner.logoUrl ? (
                             <img
                               src={partner.logoUrl}
@@ -681,7 +682,7 @@ export default function PartnerPage() {
                           {partner.name}
                         </span>
                         {/* Website link hint */}
-                        <span className="text-[10px] text-gray-400 mt-1.5 truncate max-w-full">
+                        <span className="text-[10px] text-gray-400 mt-1.5 truncate max-w-full text-center">
                           {partner.website.replace(/^https?:\/\//, "")}
                         </span>
                       </a>
